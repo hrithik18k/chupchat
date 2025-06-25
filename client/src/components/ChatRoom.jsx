@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import io from 'socket.io-client'
 import CryptoJS from 'crypto-js'
 
-const socket = io('http://localhost:5000')
+const socket = io('https://chupchat.onrender.com')
 const secretKey = import.meta.env.VITE_SECRET_KEY
 
 const ChatRoom = ({ user }) => {
