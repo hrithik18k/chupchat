@@ -29,6 +29,7 @@ body {
   color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
+  perspective: 1000px; /* For 3D effects */
 }
 
 #root {
@@ -65,6 +66,7 @@ body::after {
   border-radius: 50%;
   z-index: -1;
   opacity: 0.1;
+  filter: blur(50px); /* Soften the blur */
 }
 
 body::before {
@@ -94,6 +96,7 @@ body::after {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  transform-style: preserve-3d; /* For 3D hover effects */
 }
 
 .glass-card::before {
@@ -112,7 +115,7 @@ body::after {
 }
 
 .glass-card:hover {
-  transform: translateY(-10px) scale(1.02);
+  transform: translateY(-10px) scale(1.02) rotateX(2deg); /* Added subtle rotate */
   box-shadow: 
     0 30px 60px var(--shadow-color),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -236,6 +239,8 @@ body::after {
   backdrop-filter: blur(10px);
   border: 1px solid var(--border-color);
   text-align: center;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.5s ease-out;
 }
 
 .users-list strong {
@@ -330,6 +335,7 @@ body::after {
   font-style: italic;
   color: var(--text-secondary);
   animation: pulse 1.5s ease-in-out infinite;
+  padding: 0.5rem 0;
 }
 
 @keyframes messageSlideIn {
@@ -455,6 +461,11 @@ body::after {
   }
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* Scrollbar Styling */
 .messages-container::-webkit-scrollbar {
   width: 6px;
@@ -516,4 +527,98 @@ body::after {
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 20px auto;
+}
+
+/* New: User Profile in ChatRoom */
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--glass-bg);
+  padding: 0.75rem 1.25rem;
+  border-radius: 50px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  margin-bottom: 1.5rem;
+  justify-content: space-between; /* To push logout to the right */
+  animation: fadeIn 0.5s ease-out;
+}
+
+.user-profile img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--primary-gradient);
+}
+
+.user-profile span {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.user-profile .logout-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: color 0.3s ease;
+}
+
+.user-profile .logout-btn:hover {
+  color: #ff6b6b;
+}
+
+/* New: Room info/tooltip */
+.room-info-tooltip {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--glass-bg);
+  border: 1px solid var(--border-color);
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  z-index: 100;
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* New: Message Timestamp */
+.message-timestamp {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-left: 10px;
+}
+
+/* New: Message Self Styling */
+.message.self {
+  background: rgba(79, 172, 254, 0.1); /* Lighter success gradient */
+  border-image: var(--success-gradient) 1;
+  text-align: right;
+  margin-left: auto;
+  border-left: none;
+  border-right: 3px solid;
+}
+
+.message.self b {
+  color: #f093fb; /* Secondary gradient color */
+}
+
+/* New: Empty Chat Placeholder */
+.empty-chat-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.empty-chat-placeholder svg {
+  margin-bottom: 1rem;
+  color: rgba(255, 255, 255, 0.3);
 }
