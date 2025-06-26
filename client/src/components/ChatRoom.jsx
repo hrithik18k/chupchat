@@ -56,14 +56,13 @@ const ChatRoom = ({ user, clearUser }) => {
             setMessages(prev => [...prev, { sender: 'System', message: `A user has left the room.`, timestamp: new Date().toISOString() }]);
         });
 
-
         socket.on('receive-message', ({ encryptedMessage, sender, timestamp }) => {
             setMessages(prev => [
                 ...prev,
                 {
                     sender,
                     message: CryptoJS.AES.decrypt(encryptedMessage, secretKey).toString(CryptoJS.enc.Utf8),
-                    timestamp 
+                    timestamp: timestamp || new Date().toISOString()
                 }
             ])
             setTyping('') 
@@ -139,7 +138,8 @@ const ChatRoom = ({ user, clearUser }) => {
     const sendMessage = () => {
         if (!message.trim()) return 
         const encryptedMessage = CryptoJS.AES.encrypt(message, secretKey).toString()
-        socket.emit('send-message', { roomCode, encryptedMessage, sender: user.name, timestamp: new Date().toISOString() })
+        const timestamp = new Date().toISOString()
+        socket.emit('send-message', { roomCode, encryptedMessage, sender: user.name, timestamp })
         setMessage('')
         setTyping('') 
         socket.emit('stop-typing', { roomCode }); 
@@ -299,7 +299,7 @@ const ChatRoom = ({ user, clearUser }) => {
                         >
                             {messages.length === 0 ? (
                                 <div className="empty-chat-placeholder">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-message-circle-code"><path d="M7.9 20A9 9 0 0 1 12 10V4a8 8 0 1 0 0 16" /><path d="m17 17 2 2 2-2" /><path d="m13 21-2-2-2 2" /></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-circle-code"><path d="M7.9 20A9 9 0 0 1 12 10V4a8 8 0 1 0 0 16" /><path d="m17 17 2 2 2-2" /><path d="m13 21-2-2-2 2" /></svg>
                                     💬 No messages yet. Start the conversation!
                                     <p style={{marginTop: '0.5rem', fontSize: '0.9rem'}}>Your messages are encrypted end-to-end.</p>
                                 </div>
