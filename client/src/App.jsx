@@ -8,13 +8,15 @@ const App = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    
     const timer = setTimeout(() => {
       setLoading(false)
-    }, 1000)
-
+    }, 1500) 
     return () => clearTimeout(timer)
   }, [])
+
+  const clearUser = () => {
+    setUser(null)
+  }
 
   if (loading) {
     return (
@@ -42,7 +44,7 @@ const App = () => {
       {!user ? (
         <Login setUser={setUser} />
       ) : (
-        <ChatRoom user={user} />
+        <ChatRoom user={user} clearUser={clearUser} />
       )}
     </div>
   )
