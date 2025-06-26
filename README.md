@@ -28,7 +28,7 @@
 | Frontend         | Backend                       | Authentication        | Hosting           |
 | ---------------- | ----------------------------- | --------------------- | ----------------- |
 | React.js (Vite)  | Node.js, Express.js           | Firebase Google OAuth | Render            |
-| Socket.io-client | Socket.io, MongoDB (Mongoose) | Guest Mode            | Vercel (optional) |
+| Socket.io-client | Socket.io, MongoDB (Mongoose) | Guest Mode            | Render  |
 | Firebase Auth    | CryptoJS (AES Encryption)     |                       |                   |
 
 ---
