@@ -1,7 +1,7 @@
 # 🗨️ ChupChat – Secure Real-Time Encrypted Chat Rooms
 
-### 🔗 **Frontend:** [https://your-chupchat-frontend-url.com](https://chupchat-1.onrender.com)
-🔗 **Backend:** [https://chupchat.onrender.com](https://chupchat.onrender.com)
+### 🔗 **Client:** [https://your-chupchat-frontend-url.com](https://chupchat-1.onrender.com)
+
 
 ---
 
