@@ -13,11 +13,15 @@ const ChatRoom = ({ user, clearUser }) => {
         const params = new URLSearchParams(window.location.search);
         return params.get('room') || '';
     });
-    const [password, setPassword] = useState('');
+    const [password, setPassword] = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('pwd') || '';
+    });
+    const hasUrlPassword = new URLSearchParams(window.location.search).has('pwd');
     const [joined, setJoined] = useState(false);
     const [mode, setMode] = useState(() => {
         const params = new URLSearchParams(window.location.search);
-        return params.get('room') ? 'join' : '';
+        return params.get('room') ? 'join' : 'join';
     });
     const [error, setError] = useState('')
     const [users, setUsers] = useState([])
@@ -25,11 +29,19 @@ const ChatRoom = ({ user, clearUser }) => {
     const [message, setMessage] = useState('')
     const [typing, setTyping] = useState('')
     const [isAtBottom, setIsAtBottom] = useState(true)
+    const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
     const messagesEndRef = useRef(null)
     const messagesContainerRef = useRef(null)
     const typingTimeoutRef = useRef(null)
 
     useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const rCode = params.get('room');
+        const pwd = params.get('pwd');
+        if (rCode && pwd) {
+            socket.emit('join-room', { roomCode: rCode, user, password: pwd });
+        }
+
         socket.on('room-created', ({ success }) => {
             if (success) {
                 setJoined(true)
@@ -178,7 +190,8 @@ const ChatRoom = ({ user, clearUser }) => {
     }
 
     const handleKeyPress = (e) => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
             sendMessage()
         }
     }
@@ -192,7 +205,7 @@ const ChatRoom = ({ user, clearUser }) => {
             setMessages([])
             setUsers([])
             setError('')
-            setMode('')
+            setMode('join')
             setTyping('')
         }
     }
@@ -201,255 +214,253 @@ const ChatRoom = ({ user, clearUser }) => {
         return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
-    return (
-        <div>
-            {!joined ? (
-                <div className="room-selection">
-                    <div className="glass-card">
-                        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ margin: '0 auto 1.5rem', display: 'block' }}>
-                            <rect x="3" y="3" width="18" height="18" rx="2" stroke="var(--primary-color)" strokeWidth="2" />
-                            <path d="M3 9h18M9 3v18" stroke="var(--primary-color)" strokeWidth="2" />
-                        </svg>
+    if (!joined) {
+        return (
+            <div className="room-selection-container">
+                <div className="room-card">
+                    <h2>Secure Rooms</h2>
+                    <p>End-to-end encrypted communication.</p>
 
-                        <h2>Join the Conversation</h2>
-                        <p style={{
-                            color: 'var(--text-muted)',
-                            marginBottom: '2rem',
-                            fontSize: '1.1rem'
-                        }}>
-                            Create a new room or join an existing one
-                        </p>
-
-                        <div style={{ marginBottom: '2rem' }}>
-                            <button
-                                className={`btn ${mode === 'create' ? 'btn-success' : 'btn-secondary'}`}
-                                onClick={() => { setMode('create'); setError(''); setRoomCode(''); setPassword(''); }}
-                            >
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '8px', verticalAlign: 'middle' }}>
-                                    <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                                    <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                                </svg>
-                                Create Room
-                            </button>
-
-                            <button
-                                className={`btn ${mode === 'join' ? 'btn-success' : 'btn-secondary'}`}
-                                onClick={() => { setMode('join'); setError(''); setRoomCode(''); setPassword(''); }}
-                            >
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '8px', verticalAlign: 'middle' }}>
-                                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    <polyline points="10 17 15 12 10 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    <line x1="15" y1="12" x2="3" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                                Join Room
-                            </button>
-                        </div>
-
-                        {mode && (
-                            <div className="room-form">
-                                <input
-                                    className="input"
-                                    placeholder="Enter Room Code (4-8 chars/digits)"
-                                    value={roomCode}
-                                    onChange={e => setRoomCode(e.target.value)}
-                                    maxLength={8}
-                                />
-                                <input
-                                    className="input"
-                                    placeholder="Enter Password (4 digits)"
-                                    type="password"
-                                    value={password}
-                                    onChange={e => setPassword(e.target.value)}
-                                    maxLength={4}
-                                />
-
-                                {mode === 'create' ? (
-                                    <button className="btn btn-success" onClick={createRoom}>
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '8px', verticalAlign: 'middle' }}>
-                                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
-                                        Create Room
-                                    </button>
-                                ) : (
-                                    <button className="btn btn-success" onClick={joinRoom}>
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '8px', verticalAlign: 'middle' }}>
-                                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                            <polyline points="10 17 15 12 10 7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                            <line x1="15" y1="12" x2="3" y2="12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
-                                        Join Room
-                                    </button>
-                                )}
-
-                                {error && <div className="error">{error}</div>}
-                            </div>
-                        )}
+                    <div className="tab-buttons">
                         <button
-                            className="btn btn-secondary"
-                            onClick={clearUser}
-                            style={{ marginTop: '2rem' }}
+                            className={`tab-btn ${mode === 'join' ? 'active' : ''}`}
+                            onClick={() => { setMode('join'); setError(''); }}
                         >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '8px', verticalAlign: 'middle' }}>
-                                <line x1="19" y1="12" x2="5" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                <polyline points="12 19 5 12 12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                            Back to Login
+                            Join Room
                         </button>
-                    </div>
-                </div>
-            ) : (
-                <div className="chat-container">
-                    <div className="user-profile">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            {user.photoURL ? (
-                                <img src={user.photoURL} alt="User Avatar" />
-                            ) : (
-                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="12" cy="12" r="10" stroke="var(--primary-color)" strokeWidth="2" />
-                                    <circle cx="12" cy="10" r="3" stroke="var(--primary-color)" strokeWidth="2" />
-                                    <path d="M6.168 18.849A4 4 0 0 1 10 16h4a4 4 0 0 1 3.834 2.855" stroke="var(--primary-color)" strokeWidth="2" strokeLinecap="round" />
-                                </svg>
-                            )}
-                            <span>Hello, {user.name}!</span>
-                        </div>
-                        <button className="logout-btn" onClick={clearUser}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '4px', verticalAlign: 'middle' }}>
-                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                <polyline points="16 17 21 12 16 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                            Logout
+                        <button
+                            className={`tab-btn ${mode === 'create' ? 'active' : ''}`}
+                            onClick={() => { setMode('create'); setError(''); }}
+                        >
+                            Create Room
                         </button>
                     </div>
 
-                    <div className="glass-card">
-                        <div className="room-header">
-                            <h3>
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ verticalAlign: 'middle', marginRight: '8px' }}>
-                                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="var(--primary-color)" strokeWidth="2" />
-                                    <path d="M3 9h18M9 3v18" stroke="var(--primary-color)" strokeWidth="2" />
+                    <div className="form-group">
+                        <input
+                            className="input"
+                            placeholder="Room Code (4-8 chars/digits)"
+                            value={roomCode}
+                            onChange={e => setRoomCode(e.target.value)}
+                            maxLength={8}
+                        />
+                    </div>
+                    <div className="form-group" style={{ display: hasUrlPassword && mode === 'join' ? 'none' : 'block' }}>
+                        <input
+                            className="input"
+                            placeholder="Passcode (4 digits)"
+                            type="password"
+                            value={password}
+                            onChange={e => setPassword(e.target.value)}
+                            maxLength={4}
+                        />
+                    </div>
+
+                    {error && <div className="error-msg">{error}</div>}
+
+                    <button
+                        className="btn btn-primary"
+                        onClick={mode === 'create' ? createRoom : joinRoom}
+                    >
+                        {mode === 'create' ? 'Create' : 'Join'}
+                    </button>
+
+                    <div className="divider">Or</div>
+
+                    <button className="btn btn-outline" onClick={clearUser}>
+                        Sign Out
+                    </button>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div className="app-layout">
+            <div className={`sidebar-overlay ${mobileSidebarOpen ? 'mobile-open' : ''}`} onClick={() => setMobileSidebarOpen(false)}></div>
+            <div className={`sidebar ${mobileSidebarOpen ? 'mobile-open' : ''}`}>
+                <div className="sidebar-header">
+                    <h2>Terminal ID: {roomCode}</h2>
+                    <button className="close-sidebar-btn" onClick={() => setMobileSidebarOpen(false)}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <div className="sidebar-content">
+                    <div className="info-section">
+                        <h3>Room Invite</h3>
+                        <div className="room-code-display">
+                            <span>{roomCode}</span>
+                            <button className="icon-btn" onClick={() => navigator.clipboard.writeText(roomCode)} title="Copy Room Code">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                                 </svg>
-                                Room: {roomCode}
-                            </h3>
-                            <button
-                                className="btn btn-secondary btn-sm"
-                                onClick={() => navigator.clipboard.writeText(roomCode)}
-                                style={{ fontSize: '0.8rem', padding: '0.5rem 1rem', margin: '0.5rem auto' }}
-                                title="Click to copy room code"
-                            >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '6px', verticalAlign: 'middle' }}>
-                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                                Copy Code
                             </button>
                         </div>
-
-                        <div style={{ background: 'white', padding: '10px', borderRadius: '10px', width: 'fit-content', margin: '0 auto 1.5rem auto' }}>
+                        <div className="qr-code-wrapper">
                             <QRCode
-                                value={`${window.location.origin}/?room=${roomCode}`}
-                                size={120}
+                                value={`${window.location.origin}/?room=${roomCode}&pwd=${password}`}
+                                size={140}
                                 level="M"
                             />
                         </div>
+                    </div>
 
-                        <div className="users-list">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ verticalAlign: 'middle', marginRight: '8px' }}>
-                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="var(--primary-color)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                <circle cx="9" cy="7" r="4" stroke="var(--primary-color)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="var(--primary-color)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="var(--primary-color)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                            <strong>Online Users:</strong>
-                            <span style={{ color: 'var(--text-secondary)' }}>
-                                {users.map(u => u.name).join(', ')}
-                            </span>
-                        </div>
-
-                        <div
-                            className="messages-container"
-                            ref={messagesContainerRef}
-                            onScroll={handleScroll}
-                        >
-                            {messages.length === 0 ? (
-                                <div className="empty-chat-placeholder">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                                    </svg>
-                                    No messages yet. Start the conversation!
-                                    <p style={{ marginTop: '0.5rem', fontSize: '0.9rem' }}>Your messages are encrypted end-to-end.</p>
+                    <div className="info-section">
+                        <h3>Active Participants ({users.length})</h3>
+                        <div className="users-list-wrapper">
+                            {users.map((u, i) => (
+                                <div key={i} className="user-item">
+                                    <div className="user-avatar">
+                                        {u.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <span style={{ fontSize: '0.95rem' }}>{u.name} {u.name === user.name && '(You)'}</span>
                                 </div>
-                            ) : (
-                                <>
-                                    {messages.map((m, i) => (
-                                        <div key={i} className={`message ${m.sender === user.name ? 'self' : ''}`}>
-                                            <b>{m.sender === user.name ? 'You' : m.sender}:</b>
-                                            <div
-                                                className="message-content"
-                                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(m.message, { breaks: true })) }}
-                                            />
-                                            <span className="message-timestamp">{formatTimestamp(m.timestamp)}</span>
-                                        </div>
-                                    ))}
-                                    <div ref={messagesEndRef} />
-                                </>
-                            )}
-                            {typing && (
-                                <div className="typing-indicator">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ verticalAlign: 'middle', marginRight: '6px' }}>
-                                        <circle cx="12" cy="12" r="1" fill="currentColor" />
-                                        <circle cx="6" cy="12" r="1" fill="currentColor" />
-                                        <circle cx="18" cy="12" r="1" fill="currentColor" />
-                                    </svg>
-                                    {typing} is typing...
-                                </div>
-                            )}
-                        </div>
-                        {!isAtBottom && messages.length > 0 && (
-                            <button
-                                className="scroll-to-bottom-btn"
-                                onClick={() => {
-                                    scrollToBottom()
-                                }}
-                                title="Scroll to bottom"
-                            >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <polyline points="6 9 12 15 18 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                            </button>
-                        )}
-
-                        <div className="input-group">
-                            <input
-                                className="input"
-                                value={message}
-                                onChange={handleTyping}
-                                onBlur={handleStopTyping}
-                                onKeyPress={handleKeyPress}
-                                placeholder="Type your message..."
-                            />
-                            <button className="btn btn-success" onClick={sendMessage}>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '6px', verticalAlign: 'middle' }}>
-                                    <line x1="22" y1="2" x2="11" y2="13" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    <polygon points="22 2 15 22 11 13 2 9 22 2" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                                Send
-                            </button>
+                            ))}
                         </div>
                     </div>
-                    <button
-                        className="btn btn-secondary"
-                        style={{ marginTop: '1.5rem', width: '100%' }}
-                        onClick={handleReturnHome}
-                    >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '8px', verticalAlign: 'middle' }}>
-                            <line x1="19" y1="12" x2="5" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            <polyline points="12 19 5 12 12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </div>
+
+                <div className="sidebar-footer">
+                    <button className="btn btn-outline" style={{ color: 'var(--danger)', borderColor: 'rgba(239,68,68,0.2)' }} onClick={handleReturnHome}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
                         </svg>
                         Leave Room
                     </button>
                 </div>
-            )}
+            </div>
+
+            <div className="chat-main">
+                <div className="chat-header">
+                    <div className="chat-header-left">
+                        <button className="hamburger-btn" onClick={() => setMobileSidebarOpen(true)}>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="3" y1="12" x2="21" y2="12"></line>
+                                <line x1="3" y1="6" x2="21" y2="6"></line>
+                                <line x1="3" y1="18" x2="21" y2="18"></line>
+                            </svg>
+                        </button>
+                        <div className="chat-title">
+                            <h2>Project Channel</h2>
+                            <span>Fully Encrypted</span>
+                        </div>
+                    </div>
+                    <div className="user-avatar" style={{ width: '32px', height: '32px' }}>
+                        {user.photoURL ? (
+                            <img src={user.photoURL} alt="Avatar" />
+                        ) : (
+                            user.name.charAt(0).toUpperCase()
+                        )}
+                    </div>
+                </div>
+
+                <div
+                    className="chat-messages"
+                    ref={messagesContainerRef}
+                    onScroll={handleScroll}
+                >
+                    {messages.length === 0 ? (
+                        <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '1rem', opacity: 0.5 }}>
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            <p>No messages yet.</p>
+                            <p style={{ fontSize: '0.8rem' }}>Messages are E2E encrypted.</p>
+                        </div>
+                    ) : (
+                        <>
+                            {messages.map((m, i) => {
+                                if (m.sender === 'System') {
+                                    return <div key={i} className="system-message">{m.message}</div>
+                                }
+
+                                const isSelf = m.sender === user.name;
+                                return (
+                                    <div key={i} className={`message-wrapper ${isSelf ? 'sent' : 'received'}`}>
+                                        {!isSelf && <div className="message-sender">{m.sender}</div>}
+                                        <div className="message-bubble">
+                                            <div
+                                                className="message-content"
+                                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(m.message, { breaks: true })) }}
+                                            />
+                                        </div>
+                                        <div className="message-footer">
+                                            <span>{formatTimestamp(m.timestamp)}</span>
+                                            {isSelf && (
+                                                <span className="message-status">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                                    </svg>
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )
+                            })}
+
+                            {typing && (
+                                <div className="typing-wrapper">
+                                    <span>{typing} is typing</span>
+                                    <div className="dots">
+                                        <div className="dot"></div>
+                                        <div className="dot"></div>
+                                        <div className="dot"></div>
+                                    </div>
+                                </div>
+                            )}
+                            <div ref={messagesEndRef} />
+                        </>
+                    )}
+                </div>
+
+                {!isAtBottom && messages.length > 0 && (
+                    <button className="scroll-bottom" onClick={scrollToBottom}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <polyline points="19 12 12 19 5 12"></polyline>
+                        </svg>
+                    </button>
+                )}
+
+                <div className="chat-input-area">
+                    <div className="input-pill">
+                        <button className="emoji-btn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                                <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                                <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                            </svg>
+                        </button>
+                        <textarea
+                            className="chat-input"
+                            value={message}
+                            onChange={handleTyping}
+                            onBlur={handleStopTyping}
+                            onKeyDown={handleKeyPress}
+                            placeholder="Message"
+                            rows={1}
+                        />
+                    </div>
+                    <button
+                        className="send-btn"
+                        onClick={sendMessage}
+                        disabled={!message.trim()}
+                    >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'translateX(-1px) translateY(1px)' }}>
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+            </div>
         </div>
     )
 }
