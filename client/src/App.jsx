@@ -10,7 +10,7 @@ const App = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false)
-    }, 1500) 
+    }, 1500)
     return () => clearTimeout(timer)
   }, [])
 
@@ -28,8 +28,8 @@ const App = () => {
         flexDirection: 'column'
       }}>
         <div className="loading"></div>
-        <p style={{ 
-          color: 'var(--text-secondary)', 
+        <p style={{
+          color: 'var(--text-muted)',
           marginTop: '1rem',
           fontSize: '1.1rem'
         }}>

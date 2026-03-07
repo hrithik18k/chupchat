@@ -11,9 +11,12 @@
   },
   "dependencies": {
     "crypto-js": "^4.2.0",
+    "dompurify": "^3.3.2",
     "firebase": "^11.9.1",
+    "marked": "^17.0.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-qr-code": "^2.0.18",
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
