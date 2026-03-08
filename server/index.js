@@ -30,6 +30,8 @@ app.get('/', (req, res) => {
     res.send('ChupChat backend is running 🚀')
 })
 
+const roomTypingUsers = {}
+
 io.on('connection', (socket) => {
 
     socket.on('create-room', async ({ roomCode, user, password, roomType }) => {
@@ -80,17 +82,39 @@ io.on('connection', (socket) => {
         socket.emit('room-joined', { users: usersInRoom, pastMessages, roomType: updatedRoom.roomType })
         io.to(roomCode).emit('user-joined', usersInRoom)
     })
-    socket.on('send-message', async ({ roomCode, encryptedMessage, sender }) => {
-        await Message.create({ roomCode, encryptedMessage, sender })
-        io.to(roomCode).emit('receive-message', { encryptedMessage, sender })
+    socket.on('send-message', async ({ roomCode, encryptedMessage, sender, timestamp }) => {
+        const saved = await Message.create({ roomCode, encryptedMessage, sender, timestamp })
+        io.to(roomCode).emit('receive-message', {
+            _id: saved._id.toString(),
+            encryptedMessage,
+            sender,
+            timestamp: saved.timestamp
+        })
     })
 
     socket.on('typing', ({ roomCode, user }) => {
-        socket.to(roomCode).emit('user-typing', user.name)
+        if (!roomTypingUsers[roomCode]) roomTypingUsers[roomCode] = new Set()
+        roomTypingUsers[roomCode].add(user)
+        io.to(roomCode).emit('users-typing', Array.from(roomTypingUsers[roomCode]))
     })
 
-    socket.on('stop-typing', ({ roomCode }) => {
-        socket.to(roomCode).emit('user-stopped-typing')
+    socket.on('stop-typing', ({ roomCode, user }) => {
+        if (roomTypingUsers[roomCode]) {
+            roomTypingUsers[roomCode].delete(user)
+            io.to(roomCode).emit('users-typing', Array.from(roomTypingUsers[roomCode]))
+        }
+    })
+
+    socket.on('mark-seen', async ({ roomCode, messageIds, userName }) => {
+        await Message.updateMany(
+            { _id: { $in: messageIds }, 'seenBy.name': { $ne: userName } },
+            { $push: { seenBy: { name: userName, seenAt: new Date() } } }
+        )
+        const updatedMessages = await Message.find(
+            { _id: { $in: messageIds } },
+            { _id: 1, seenBy: 1 }
+        )
+        io.to(roomCode).emit('seen-update', updatedMessages)
     })
 
     socket.on('disconnecting', async () => {
@@ -99,6 +123,12 @@ io.on('connection', (socket) => {
 
             const room = await Room.findOne({ code: roomCode })
             if (room) {
+                const userObj = room.users.find(u => u.socketId === socket.id)
+                if (userObj && roomTypingUsers[roomCode]) {
+                    roomTypingUsers[roomCode].delete(userObj.name)
+                    io.to(roomCode).emit('users-typing', Array.from(roomTypingUsers[roomCode]))
+                }
+
                 await Room.findOneAndUpdate(
                     { code: roomCode },
                     { $pull: { users: { socketId: socket.id } } }
