@@ -27,7 +27,8 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
     const [users, setUsers] = useState([])
     const [messages, setMessages] = useState([])
     const [message, setMessage] = useState('')
-    const [typing, setTyping] = useState('')
+    const [typingUsers, setTypingUsers] = useState([])
+    const [openReceiptId, setOpenReceiptId] = useState(null)
     const [roomType, setRoomType] = useState('normal')
     const [currentRoomType, setCurrentRoomType] = useState('normal')
     const [showGhostToast, setShowGhostToast] = useState(false)
@@ -56,9 +57,11 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
             setUsers(users)
             setCurrentRoomType(roomType || 'normal');
             const decrypted = pastMessages.map(m => ({
+                _id: m._id,
                 sender: m.sender,
                 message: CryptoJS.AES.decrypt(m.encryptedMessage, secretKey).toString(CryptoJS.enc.Utf8),
-                timestamp: m.timestamp
+                timestamp: m.timestamp,
+                seenBy: m.seenBy || []
             }))
             setMessages(decrypted)
             setJoined(true)
@@ -81,25 +84,30 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
             setMessages(prev => [...prev, { sender: 'System', message: `A user has left the room.`, timestamp: new Date().toISOString() }]);
         });
 
-        socket.on('receive-message', ({ encryptedMessage, sender, timestamp }) => {
+        socket.on('receive-message', ({ _id, encryptedMessage, sender, timestamp }) => {
             setMessages(prev => [
                 ...prev,
                 {
+                    _id,
                     sender,
                     message: CryptoJS.AES.decrypt(encryptedMessage, secretKey).toString(CryptoJS.enc.Utf8),
-                    timestamp: timestamp || new Date().toISOString()
+                    timestamp: timestamp || new Date().toISOString(),
+                    seenBy: []
                 }
             ])
-            setTyping('')
+            setTypingUsers(prev => prev.filter(u => u !== sender))
         })
 
-        socket.on('user-typing', (typerName) => {
-            if (typerName !== user.name) {
-                setTyping(typerName)
-            }
+        socket.on('users-typing', (typersArray) => {
+            setTypingUsers(typersArray)
         })
 
-        socket.on('user-stopped-typing', () => setTyping(''))
+        socket.on('seen-update', (updates) => {
+            setMessages(prev => prev.map(m => {
+                const update = updates.find(u => u._id === m._id)
+                return update ? { ...m, seenBy: update.seenBy } : m
+            }))
+        })
 
         const handleRoomClosed = () => {
             setShowGhostToast(true);
@@ -125,17 +133,40 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
             socket.off('user-joined')
             socket.off('user-left')
             socket.off('receive-message')
-            socket.off('user-typing')
-            socket.off('user-stopped-typing')
+            socket.off('users-typing')
+            socket.off('seen-update')
             socket.off('room-closed', handleRoomClosed)
         }
     }, [roomCode, user.name, users, user])
+
+    useEffect(() => {
+        const handleClickOutside = () => setOpenReceiptId(null);
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, []);
 
     useEffect(() => {
         if (isAtBottom && messages.length > 0) {
             scrollToBottom()
         }
     }, [messages, isAtBottom])
+
+    useEffect(() => {
+        if (!joined) return;
+        const observer = new IntersectionObserver((entries) => {
+            const visibleIds = entries
+                .filter(e => e.isIntersecting)
+                .map(e => e.target.dataset.messageId)
+                .filter(Boolean)
+            if (visibleIds.length > 0) {
+                socket.emit('mark-seen', { roomCode, messageIds: visibleIds, userName: user.name })
+            }
+        }, { threshold: 0.5 })
+
+        document.querySelectorAll('.received[data-message-id]').forEach(el => observer.observe(el))
+
+        return () => observer.disconnect()
+    }, [messages, joined, roomCode, user.name])
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -184,8 +215,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
         const timestamp = new Date().toISOString()
         socket.emit('send-message', { roomCode, encryptedMessage, sender: user.name, timestamp })
         setMessage('')
-        setTyping('')
-        socket.emit('stop-typing', { roomCode });
+        socket.emit('stop-typing', { roomCode, user: user.name });
         setIsAtBottom(true)
     }
 
@@ -197,10 +227,10 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                 clearTimeout(typingTimeoutRef.current)
             }
             typingTimeoutRef.current = setTimeout(() => {
-                socket.emit('stop-typing', { roomCode })
+                socket.emit('stop-typing', { roomCode, user: user.name })
             }, 3000);
         } else {
-            socket.emit('stop-typing', { roomCode })
+            socket.emit('stop-typing', { roomCode, user: user.name })
         }
     }
 
@@ -208,7 +238,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
         if (typingTimeoutRef.current) {
             clearTimeout(typingTimeoutRef.current)
         }
-        socket.emit('stop-typing', { roomCode })
+        socket.emit('stop-typing', { roomCode, user: user.name })
     }
 
     const handleKeyPress = (e) => {
@@ -474,7 +504,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
 
                                 const isSelf = m.sender === user.name;
                                 return (
-                                    <div key={i} className={`message-wrapper ${isSelf ? 'sent' : 'received'}`}>
+                                    <div key={i} data-message-id={!isSelf ? m._id : undefined} className={`message-wrapper ${isSelf ? 'sent' : 'received'}`} style={{ position: 'relative' }}>
                                         {!isSelf && <div className="message-sender">{m.sender}</div>}
                                         <div className="message-bubble">
                                             <div
@@ -482,30 +512,101 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                                                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(m.message, { breaks: true })) }}
                                             />
                                         </div>
-                                        <div className="message-footer">
+                                        <div className="message-footer" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             <span>{formatTimestamp(m.timestamp)}</span>
                                             {isSelf && (
-                                                <span className="message-status">
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <polyline points="20 6 9 17 4 12"></polyline>
-                                                    </svg>
-                                                </span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <span className="message-status" style={{ display: 'flex' }}>
+                                                        {(!m.seenBy || m.seenBy.length === 0) ? (
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                                            </svg>
+                                                        ) : (
+                                                            <div style={{ position: 'relative', width: '18px', height: '14px', color: 'var(--accent-primary)' }}>
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 0 }}>
+                                                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                                                </svg>
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: '6px' }}>
+                                                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                                                </svg>
+                                                            </div>
+                                                        )}
+                                                    </span>
+                                                    <button
+                                                        className="message-info-btn"
+                                                        onClick={(e) => { e.stopPropagation(); setOpenReceiptId(prev => prev === m._id ? null : m._id); }}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', padding: 0 }}
+                                                        title="Message Info"
+                                                    >
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                                            <circle cx="12" cy="12" r="10"></circle>
+                                                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                                                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
+
+                                        {isSelf && openReceiptId === m._id && (
+                                            <div
+                                                style={{
+                                                    position: 'absolute', bottom: '100%', right: '0', marginBottom: '8px',
+                                                    background: 'var(--bg-surface-alt)', border: '1px solid var(--border-light)',
+                                                    borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+                                                    fontSize: '0.8rem', zIndex: 100, minWidth: '150px',
+                                                    animation: 'fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                                                    transformOrigin: 'bottom right'
+                                                }}
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-light)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                                    Seen by
+                                                </div>
+                                                <div style={{ padding: '6px 0', maxHeight: '150px', overflowY: 'auto' }}>
+                                                    {(!m.seenBy || m.seenBy.length === 0) ? (
+                                                        <div style={{ padding: '4px 12px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>Not seen yet</div>
+                                                    ) : (
+                                                        m.seenBy.map((s, idx) => (
+                                                            <div key={idx} style={{ padding: '4px 12px', display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+                                                                <span><span style={{ color: 'var(--accent-primary)', marginRight: '4px' }}>✓</span> {s.name}</span>
+                                                                <span style={{ color: 'var(--text-secondary)' }}>{formatTimestamp(s.seenAt)}</span>
+                                                            </div>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )
                             })}
 
-                            {typing && (
-                                <div className="typing-wrapper">
-                                    <span>{typing} is typing</span>
-                                    <div className="dots">
-                                        <div className="dot"></div>
-                                        <div className="dot"></div>
-                                        <div className="dot"></div>
+                            {(() => {
+                                const othersTyping = typingUsers.filter(u => u !== user.name);
+                                if (othersTyping.length === 0) return null;
+
+                                let typingText = '';
+                                if (othersTyping.length === 1) typingText = `${othersTyping[0]} is typing`;
+                                else if (othersTyping.length === 2) typingText = `${othersTyping[0]} and ${othersTyping[1]} are typing`;
+                                else typingText = `Several people are typing`;
+
+                                return (
+                                    <div className="typing-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {othersTyping.length === 1 && (
+                                            <div className="user-avatar" style={{ width: '28px', height: '28px', fontSize: '0.8rem', border: 'none', background: 'var(--accent-primary)', color: 'white' }}>
+                                                {othersTyping[0].charAt(0).toUpperCase()}
+                                            </div>
+                                        )}
+                                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>{typingText}</span>
+                                        <div className="dots" style={{ marginLeft: '4px' }}>
+                                            <div className="dot"></div>
+                                            <div className="dot"></div>
+                                            <div className="dot"></div>
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                )
+                            })()}
                             <div ref={messagesEndRef} />
                         </>
                     )}

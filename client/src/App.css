@@ -912,3 +912,20 @@ h6 {
     transform: rotate(360deg);
   }
 }
+
+/* Read Receipt Info Button Hover */
+.message-info-btn {
+  opacity: 1;
+  /* Always visible on mobile by default */
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .message-info-btn {
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .message-wrapper:hover .message-info-btn {
+    opacity: 1;
+  }
+}
