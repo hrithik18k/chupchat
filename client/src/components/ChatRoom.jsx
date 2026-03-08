@@ -8,7 +8,7 @@ import DOMPurify from 'dompurify'
 const socket = io('https://chupchat.onrender.com')
 const secretKey = import.meta.env.VITE_SECRET_KEY
 
-const ChatRoom = ({ user, clearUser }) => {
+const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
     const [roomCode, setRoomCode] = useState(() => {
         const params = new URLSearchParams(window.location.search);
         return params.get('room') || '';
@@ -28,6 +28,9 @@ const ChatRoom = ({ user, clearUser }) => {
     const [messages, setMessages] = useState([])
     const [message, setMessage] = useState('')
     const [typing, setTyping] = useState('')
+    const [roomType, setRoomType] = useState('normal')
+    const [currentRoomType, setCurrentRoomType] = useState('normal')
+    const [showGhostToast, setShowGhostToast] = useState(false)
     const [isAtBottom, setIsAtBottom] = useState(true)
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
     const messagesEndRef = useRef(null)
@@ -49,8 +52,9 @@ const ChatRoom = ({ user, clearUser }) => {
             }
         })
 
-        socket.on('room-joined', ({ users, pastMessages }) => {
+        socket.on('room-joined', ({ users, pastMessages, roomType }) => {
             setUsers(users)
+            setCurrentRoomType(roomType || 'normal');
             const decrypted = pastMessages.map(m => ({
                 sender: m.sender,
                 message: CryptoJS.AES.decrypt(m.encryptedMessage, secretKey).toString(CryptoJS.enc.Utf8),
@@ -97,6 +101,23 @@ const ChatRoom = ({ user, clearUser }) => {
 
         socket.on('user-stopped-typing', () => setTyping(''))
 
+        const handleRoomClosed = () => {
+            setShowGhostToast(true);
+            setTimeout(() => {
+                setShowGhostToast(false);
+                socket.emit('leave-room', { roomCode, user });
+                setJoined(false);
+                setRoomCode('');
+                setPassword('');
+                setMessages([]);
+                setUsers([]);
+                setError('');
+                setMode('join');
+                setTyping('');
+            }, 2000);
+        };
+        socket.on('room-closed', handleRoomClosed)
+
         return () => {
             socket.off('room-created')
             socket.off('room-joined')
@@ -106,8 +127,9 @@ const ChatRoom = ({ user, clearUser }) => {
             socket.off('receive-message')
             socket.off('user-typing')
             socket.off('user-stopped-typing')
+            socket.off('room-closed', handleRoomClosed)
         }
-    }, [roomCode, user.name, users])
+    }, [roomCode, user.name, users, user])
 
     useEffect(() => {
         if (isAtBottom && messages.length > 0) {
@@ -141,7 +163,7 @@ const ChatRoom = ({ user, clearUser }) => {
             setError('Password must be a 4-digit number.')
             return
         }
-        socket.emit('create-room', { roomCode, user, password })
+        socket.emit('create-room', { roomCode, user, password, roomType })
     }
 
     const joinRoom = () => {
@@ -196,17 +218,21 @@ const ChatRoom = ({ user, clearUser }) => {
         }
     }
 
+    const handleReturnHomeSilent = () => {
+        socket.emit('leave-room', { roomCode, user });
+        setJoined(false)
+        setRoomCode('')
+        setPassword('')
+        setMessages([])
+        setUsers([])
+        setError('')
+        setMode('join')
+        setTyping('')
+    }
+
     const handleReturnHome = () => {
         if (window.confirm('Are you sure you want to leave this room?')) {
-            socket.emit('leave-room', { roomCode, user });
-            setJoined(false)
-            setRoomCode('')
-            setPassword('')
-            setMessages([])
-            setUsers([])
-            setError('')
-            setMode('join')
-            setTyping('')
+            handleReturnHomeSilent();
         }
     }
 
@@ -216,7 +242,15 @@ const ChatRoom = ({ user, clearUser }) => {
 
     if (!joined) {
         return (
-            <div className="room-selection-container">
+            <div className="room-selection-container" style={{ position: 'relative' }}>
+                <button
+                    className="theme-toggle-btn"
+                    onClick={toggleTheme}
+                    style={{ position: 'absolute', top: '20px', right: '20px' }}
+                    title="Toggle Theme"
+                >
+                    {theme === 'dark' ? '☀️' : '🌙'}
+                </button>
                 <div className="room-card">
                     <h2>Secure Rooms</h2>
                     <p>End-to-end encrypted communication.</p>
@@ -255,6 +289,39 @@ const ChatRoom = ({ user, clearUser }) => {
                             maxLength={4}
                         />
                     </div>
+
+                    {mode === 'create' && (
+                        <div className="room-type-selector" style={{ marginBottom: '1.5rem' }}>
+                            <div className="tab-buttons" style={{ marginBottom: '0.5rem', display: 'flex', gap: '0.5rem' }}>
+                                <button
+                                    className={`tab-btn ${roomType === 'normal' ? 'active' : ''}`}
+                                    onClick={() => setRoomType('normal')}
+                                    style={{ flex: 1, padding: '0.5rem', fontSize: '0.85rem' }}
+                                >
+                                    🔓 Normal
+                                </button>
+                                <button
+                                    className={`tab-btn ${roomType === 'ghost' ? 'active' : ''}`}
+                                    onClick={() => setRoomType('ghost')}
+                                    style={{ flex: 1, padding: '0.5rem', fontSize: '0.85rem' }}
+                                >
+                                    👻 Ghost
+                                </button>
+                                <button
+                                    className={`tab-btn ${roomType === 'couples' ? 'active' : ''}`}
+                                    onClick={() => setRoomType('couples')}
+                                    style={{ flex: 1, padding: '0.5rem', fontSize: '0.85rem' }}
+                                >
+                                    💑 Couples
+                                </button>
+                            </div>
+                            <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                {roomType === 'normal' && 'Persistent room, messages saved'}
+                                {roomType === 'ghost' && 'Auto-deletes when everyone leaves'}
+                                {roomType === 'couples' && 'Private room, max 2 members'}
+                            </div>
+                        </div>
+                    )}
 
                     {error && <div className="error-msg">{error}</div>}
 
@@ -337,7 +404,12 @@ const ChatRoom = ({ user, clearUser }) => {
                 </div>
             </div>
 
-            <div className="chat-main">
+            <div className="chat-main" style={{ position: 'relative' }}>
+                {showGhostToast && (
+                    <div className="ghost-toast" style={{ position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(239,68,68,0.9)', color: 'white', padding: '10px 20px', borderRadius: '20px', zIndex: 100, fontWeight: 'bold', fontSize: '0.9rem', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+                        This Ghost Room has been dissolved.
+                    </div>
+                )}
                 <div className="chat-header">
                     <div className="chat-header-left">
                         <button className="hamburger-btn" onClick={() => setMobileSidebarOpen(true)}>
@@ -348,16 +420,35 @@ const ChatRoom = ({ user, clearUser }) => {
                             </svg>
                         </button>
                         <div className="chat-title">
-                            <h2>Project Channel</h2>
+                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                Project Channel
+                                {currentRoomType === 'ghost' && (
+                                    <span style={{ background: '#4b5563', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold' }}>👻 Ghost</span>
+                                )}
+                                {currentRoomType === 'couples' && (
+                                    <span style={{ background: '#ec4899', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold' }}>💑 Couples</span>
+                                )}
+                            </h2>
                             <span>Fully Encrypted</span>
                         </div>
                     </div>
-                    <div className="user-avatar" style={{ width: '32px', height: '32px' }}>
-                        {user.photoURL ? (
-                            <img src={user.photoURL} alt="Avatar" />
-                        ) : (
-                            user.name.charAt(0).toUpperCase()
-                        )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button
+                            onClick={toggleTheme}
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '50%', color: 'var(--text-primary)', transition: 'all 0.2s' }}
+                            title="Toggle Theme"
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-surface-alt)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            {theme === 'dark' ? '☀️' : '🌙'}
+                        </button>
+                        <div className="user-avatar" style={{ width: '32px', height: '32px' }}>
+                            {user.photoURL ? (
+                                <img src={user.photoURL} alt="Avatar" />
+                            ) : (
+                                user.name.charAt(0).toUpperCase()
+                            )}
+                        </div>
                     </div>
                 </div>
 

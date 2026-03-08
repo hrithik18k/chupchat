@@ -23,8 +23,8 @@ app.use(cors())
 app.use(express.json())
 
 mongoose.connect(process.env.MONGO_URI)
-.then(() => console.log(' MongoDB Connected'))
-.catch(err => console.log('DB Error:', err))
+    .then(() => console.log(' MongoDB Connected'))
+    .catch(err => console.log('DB Error:', err))
 
 app.get('/', (req, res) => {
     res.send('ChupChat backend is running 🚀')
@@ -32,7 +32,7 @@ app.get('/', (req, res) => {
 
 io.on('connection', (socket) => {
 
-    socket.on('create-room', async ({ roomCode, user, password }) => {
+    socket.on('create-room', async ({ roomCode, user, password, roomType }) => {
         let room = await Room.findOne({ code: roomCode })
         if (room) {
             socket.emit('room-error', 'Room already exists')
@@ -42,6 +42,7 @@ io.on('connection', (socket) => {
             code: roomCode,
             createdBy: user.email || 'guest_' + socket.id,
             password,
+            roomType: roomType || 'normal',
             users: [{ name: user.name, socketId: socket.id }]
         })
         socket.join(roomCode)
@@ -58,6 +59,10 @@ io.on('connection', (socket) => {
             socket.emit('room-error', 'Incorrect password')
             return
         }
+        if (room.roomType === 'couples' && room.users.length >= 2) {
+            socket.emit('room-error', 'This room is full (Couples only)')
+            return
+        }
         socket.join(roomCode)
         await Room.findOneAndUpdate(
             { code: roomCode },
@@ -72,7 +77,7 @@ io.on('connection', (socket) => {
         const usersInRoom = updatedRoom.users.map(u => ({ name: u.name, id: u.socketId }))
         const pastMessages = await Message.find({ roomCode })
 
-        socket.emit('room-joined', { users: usersInRoom, pastMessages })
+        socket.emit('room-joined', { users: usersInRoom, pastMessages, roomType: updatedRoom.roomType })
         io.to(roomCode).emit('user-joined', usersInRoom)
     })
     socket.on('send-message', async ({ roomCode, encryptedMessage, sender }) => {
@@ -95,11 +100,17 @@ io.on('connection', (socket) => {
             const room = await Room.findOne({ code: roomCode })
             if (room) {
                 await Room.findOneAndUpdate(
-                { code: roomCode },
-                { $pull: { users: { socketId: socket.id } } }
-            )
-            const updatedRoom = await Room.findOne({ code: roomCode })
-            io.to(roomCode).emit('user-joined', updatedRoom ? updatedRoom.users : [])
+                    { code: roomCode },
+                    { $pull: { users: { socketId: socket.id } } }
+                )
+                const updatedRoom = await Room.findOne({ code: roomCode })
+                if (updatedRoom && updatedRoom.users.length === 0 && updatedRoom.roomType === 'ghost') {
+                    await Message.deleteMany({ roomCode })
+                    await Room.deleteOne({ code: roomCode })
+                    io.to(roomCode).emit('room-closed')
+                } else {
+                    io.to(roomCode).emit('user-joined', updatedRoom ? updatedRoom.users : [])
+                }
             }
         }
     })

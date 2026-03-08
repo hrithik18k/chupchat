@@ -7,6 +7,19 @@ const App = () => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('chupchat-theme') || 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('chupchat-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false)
@@ -42,9 +55,9 @@ const App = () => {
   return (
     <div>
       {!user ? (
-        <Login setUser={setUser} />
+        <Login setUser={setUser} theme={theme} toggleTheme={toggleTheme} />
       ) : (
-        <ChatRoom user={user} clearUser={clearUser} />
+        <ChatRoom user={user} clearUser={clearUser} theme={theme} toggleTheme={toggleTheme} />
       )}
     </div>
   )
