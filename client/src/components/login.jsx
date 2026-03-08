@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { signInWithGoogle } from '../firebase'
 
-const Login = ({ setUser }) => {
+const Login = ({ setUser, theme, toggleTheme }) => {
     const [isSigningIn, setIsSigningIn] = useState(false)
 
     const handleGoogleSignIn = () => {
@@ -26,7 +26,15 @@ const Login = ({ setUser }) => {
     }
 
     return (
-        <div className="login-container">
+        <div className="login-container" style={{ position: 'relative' }}>
+            <button
+                className="theme-toggle-btn"
+                onClick={toggleTheme}
+                style={{ position: 'absolute', top: '20px', right: '20px' }}
+                title="Toggle Theme"
+            >
+                {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
             <div className="login-left">
                 <div style={{ textAlign: 'center', maxWidth: '400px', zIndex: 1 }}>
                     <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '2rem' }}>

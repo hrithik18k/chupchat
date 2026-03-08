@@ -4,10 +4,11 @@ const roomSchema = new mongoose.Schema({
     code: { type: String, required: true, unique: true },
     createdBy: { type: String, required: true },
     password: { type: String, required: true },
+    roomType: { type: String, enum: ['normal', 'ghost', 'couples'], default: 'normal' },
     users: [
         {
-        name: String,
-        socketId: String
+            name: String,
+            socketId: String
         }
     ]
 })

@@ -15,6 +15,39 @@
   --font-body: 'DM Sans', sans-serif;
 }
 
+[data-theme="light"] {
+  --bg-base: #f1f5f9;
+  --bg-surface: #ffffff;
+  --bg-surface-alt: #e2e8f0;
+  --accent-primary: #4f46e5;
+  --accent-hover: #4338ca;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --border-light: rgba(0, 0, 0, 0.1);
+  color-scheme: light;
+}
+
+.theme-toggle-btn {
+  background: var(--bg-surface-alt);
+  color: var(--text-primary);
+  border: 1px solid var(--border-light);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 999;
+  font-size: 1.2rem;
+  transition: all 0.2s;
+}
+
+.theme-toggle-btn:hover {
+  transform: scale(1.05);
+  background: var(--bg-surface);
+}
+
 * {
   margin: 0;
   padding: 0;
