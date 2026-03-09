@@ -117,6 +117,48 @@ io.on('connection', (socket) => {
         io.to(roomCode).emit('seen-update', updatedMessages)
     })
 
+    socket.on('delete-message', async ({ roomCode, messageId, userName }) => {
+        try {
+            console.log(`Attempting to delete message ${messageId} for user ${userName} in room ${roomCode}`);
+            const deleted = await Message.findOneAndDelete({ _id: messageId, sender: userName });
+            if (deleted) {
+                console.log(`Deleted successfully: ${messageId}`);
+                io.to(roomCode).emit('message-deleted', { messageId });
+            } else {
+                console.log(`Delete failed - no matching message found for sender ${userName} with id ${messageId}`);
+                socket.emit('edit-error', { error: 'Delete failed. Message not found or you are not the sender.' });
+            }
+        } catch (error) {
+            console.error('Error in delete-message:', error);
+            socket.emit('edit-error', { error: 'Internal server error while deleting message' });
+        }
+    });
+
+    socket.on('edit-message', async ({ roomCode, messageId, newEncryptedMessage, userName }) => {
+        try {
+            console.log(`Attempting to edit message ${messageId} for user ${userName} in room ${roomCode}`);
+            const message = await Message.findOne({ _id: messageId, sender: userName });
+            if (message) {
+                const timeDiff = Date.now() - new Date(message.timestamp).getTime();
+                if (timeDiff <= 20 * 60 * 1000) {
+                    const editedAt = new Date();
+                    await Message.updateOne({ _id: messageId }, { encryptedMessage: newEncryptedMessage, edited: true, editedAt });
+                    console.log(`Edited successfully: ${messageId}`);
+                    io.to(roomCode).emit('message-edited', { messageId, newEncryptedMessage, editedAt });
+                } else {
+                    console.log(`Edit failed - window expired for message ${messageId}`);
+                    socket.emit('edit-error', { error: 'Edit window has expired' });
+                }
+            } else {
+                console.log(`Edit failed - no matching message found for sender ${userName} with id ${messageId}`);
+                socket.emit('edit-error', { error: 'Edit failed. Message not found or you are not the sender.' });
+            }
+        } catch (error) {
+            console.error('Error in edit-message:', error);
+            socket.emit('edit-error', { error: 'Internal server error while editing message' });
+        }
+    });
+
     socket.on('disconnecting', async () => {
         for (const roomCode of socket.rooms) {
             if (roomCode === socket.id) continue
