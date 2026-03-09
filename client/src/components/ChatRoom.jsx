@@ -5,7 +5,7 @@ import QRCode from 'react-qr-code'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 
-const socket = io('https://chupchat.onrender.com')
+const socket = io(import.meta.env.DEV ? 'http://localhost:5000' : 'https://chupchat.onrender.com')
 const secretKey = import.meta.env.VITE_SECRET_KEY
 
 const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
@@ -34,9 +34,13 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
     const [showGhostToast, setShowGhostToast] = useState(false)
     const [isAtBottom, setIsAtBottom] = useState(true)
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+    const [editingMessageId, setEditingMessageId] = useState(null)
+    const [editText, setEditText] = useState('')
+    const [openContextMenuId, setOpenContextMenuId] = useState(null)
     const messagesEndRef = useRef(null)
     const messagesContainerRef = useRef(null)
     const typingTimeoutRef = useRef(null)
+    const longPressTimeoutRef = useRef(null)
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -61,7 +65,9 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                 sender: m.sender,
                 message: CryptoJS.AES.decrypt(m.encryptedMessage, secretKey).toString(CryptoJS.enc.Utf8),
                 timestamp: m.timestamp,
-                seenBy: m.seenBy || []
+                seenBy: m.seenBy || [],
+                edited: m.edited || false,
+                editedAt: m.editedAt || null
             }))
             setMessages(decrypted)
             setJoined(true)
@@ -92,11 +98,35 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                     sender,
                     message: CryptoJS.AES.decrypt(encryptedMessage, secretKey).toString(CryptoJS.enc.Utf8),
                     timestamp: timestamp || new Date().toISOString(),
-                    seenBy: []
+                    seenBy: [],
+                    edited: false,
+                    editedAt: null
                 }
             ])
             setTypingUsers(prev => prev.filter(u => u !== sender))
         })
+
+        socket.on('message-deleted', ({ messageId }) => {
+            setMessages(prev => prev.filter(m => m._id !== messageId));
+        });
+
+        socket.on('message-edited', ({ messageId, newEncryptedMessage, editedAt }) => {
+            setMessages(prev => prev.map(m => {
+                if (m._id === messageId) {
+                    return {
+                        ...m,
+                        message: CryptoJS.AES.decrypt(newEncryptedMessage, secretKey).toString(CryptoJS.enc.Utf8),
+                        edited: true,
+                        editedAt
+                    };
+                }
+                return m;
+            }));
+        });
+
+        socket.on('edit-error', ({ error }) => {
+            alert(error);
+        });
 
         socket.on('users-typing', (typersArray) => {
             setTypingUsers(typersArray)
@@ -133,6 +163,9 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
             socket.off('user-joined')
             socket.off('user-left')
             socket.off('receive-message')
+            socket.off('message-deleted')
+            socket.off('message-edited')
+            socket.off('edit-error')
             socket.off('users-typing')
             socket.off('seen-update')
             socket.off('room-closed', handleRoomClosed)
@@ -140,7 +173,10 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
     }, [roomCode, user.name, users, user])
 
     useEffect(() => {
-        const handleClickOutside = () => setOpenReceiptId(null);
+        const handleClickOutside = () => {
+            setOpenReceiptId(null);
+            setOpenContextMenuId(null);
+        };
         document.addEventListener('click', handleClickOutside);
         return () => document.removeEventListener('click', handleClickOutside);
     }, []);
@@ -265,6 +301,48 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
             handleReturnHomeSilent();
         }
     }
+
+    const handleTouchStart = (e, m) => {
+        if (m.sender !== user.name) return;
+        if (longPressTimeoutRef.current) clearTimeout(longPressTimeoutRef.current);
+        longPressTimeoutRef.current = setTimeout(() => {
+            setOpenContextMenuId(m._id);
+            setOpenReceiptId(null);
+        }, 500);
+    };
+
+    const handleTouchEnd = () => {
+        if (longPressTimeoutRef.current) clearTimeout(longPressTimeoutRef.current);
+    };
+
+    const handleContextMenu = (e, m) => {
+        if (m.sender !== user.name) return;
+        e.preventDefault();
+        e.stopPropagation();
+        setOpenContextMenuId(m._id);
+        setOpenReceiptId(null);
+    };
+
+    const handleDeleteMessage = (messageId) => {
+        socket.emit('delete-message', { roomCode, messageId, userName: user.name });
+        setOpenContextMenuId(null);
+    };
+
+    const handleEditMessageStart = (m) => {
+        setEditingMessageId(m._id);
+        setEditText(m.message);
+        setOpenContextMenuId(null);
+    };
+
+    const handleSaveEdit = (m) => {
+        if (!editText.trim() || editText === m.message) {
+            setEditingMessageId(null);
+            return;
+        }
+        const newEncryptedMessage = CryptoJS.AES.encrypt(editText, secretKey).toString();
+        socket.emit('edit-message', { roomCode, messageId: m._id, newEncryptedMessage, userName: user.name });
+        setEditingMessageId(null);
+    };
 
     const formatTimestamp = (timestamp) => {
         return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -506,14 +584,37 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                                 return (
                                     <div key={i} data-message-id={!isSelf ? m._id : undefined} className={`message-wrapper ${isSelf ? 'sent' : 'received'}`} style={{ position: 'relative' }}>
                                         {!isSelf && <div className="message-sender">{m.sender}</div>}
-                                        <div className="message-bubble">
-                                            <div
-                                                className="message-content"
-                                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(m.message, { breaks: true })) }}
-                                            />
+                                        <div
+                                            className="message-bubble"
+                                            onTouchStart={(e) => handleTouchStart(e, m)}
+                                            onTouchEnd={handleTouchEnd}
+                                            onTouchMove={handleTouchEnd}
+                                        >
+                                            {editingMessageId === m._id ? (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '200px' }}>
+                                                    <textarea
+                                                        value={editText}
+                                                        onChange={e => setEditText(e.target.value)}
+                                                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--border-light)', background: 'var(--bg-surface-alt)', color: 'var(--text-primary)', resize: 'none' }}
+                                                        onClick={e => e.stopPropagation()}
+                                                    />
+                                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                                        <button onClick={(e) => { e.stopPropagation(); setEditingMessageId(null); }} style={{ padding: '4px 8px', borderRadius: '4px', background: 'transparent', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer' }}>Cancel</button>
+                                                        <button onClick={(e) => { e.stopPropagation(); handleSaveEdit(m); }} style={{ padding: '4px 8px', borderRadius: '4px', background: 'var(--accent-primary)', color: 'white', border: 'none', cursor: 'pointer' }}>Save</button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    className="message-content"
+                                                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(m.message, { breaks: true })) }}
+                                                />
+                                            )}
                                         </div>
                                         <div className="message-footer" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             <span>{formatTimestamp(m.timestamp)}</span>
+                                            {m.edited && (
+                                                <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginLeft: '4px' }}>edited</span>
+                                            )}
                                             {isSelf && (
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                     <span className="message-status" style={{ display: 'flex' }}>
@@ -534,7 +635,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                                                     </span>
                                                     <button
                                                         className="message-info-btn"
-                                                        onClick={(e) => { e.stopPropagation(); setOpenReceiptId(prev => prev === m._id ? null : m._id); }}
+                                                        onClick={(e) => { e.stopPropagation(); setOpenReceiptId(prev => prev === m._id ? null : m._id); setOpenContextMenuId(null); }}
                                                         style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', padding: 0 }}
                                                         title="Message Info"
                                                     >
@@ -544,9 +645,56 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                                                             <line x1="12" y1="8" x2="12.01" y2="8"></line>
                                                         </svg>
                                                     </button>
+                                                    <button
+                                                        className="message-info-btn"
+                                                        onClick={(e) => handleContextMenu(e, m)}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', padding: 0 }}
+                                                        title="More options"
+                                                    >
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                                            <circle cx="12" cy="5" r="1.5"></circle>
+                                                            <circle cx="12" cy="12" r="1.5"></circle>
+                                                            <circle cx="12" cy="19" r="1.5"></circle>
+                                                        </svg>
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>
+
+                                        {isSelf && openContextMenuId === m._id && editingMessageId !== m._id && (
+                                            <div
+                                                style={{
+                                                    position: 'absolute', bottom: '100%', right: '0', marginBottom: '8px',
+                                                    background: 'var(--bg-surface-alt)', border: '1px solid var(--border-light)',
+                                                    borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+                                                    fontSize: '0.85rem', zIndex: 101, minWidth: '160px',
+                                                    animation: 'fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                                                    transformOrigin: 'bottom right',
+                                                    display: 'flex', flexDirection: 'column',
+                                                    overflow: 'hidden'
+                                                }}
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                {Date.now() - new Date(m.timestamp).getTime() <= 20 * 60 * 1000 && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleEditMessageStart(m); }}
+                                                        style={{ padding: '8px 12px', textAlign: 'left', background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', borderBottom: '1px solid var(--border-light)' }}
+                                                        onMouseEnter={e => e.target.style.background = 'rgba(255,255,255,0.05)'}
+                                                        onMouseLeave={e => e.target.style.background = 'transparent'}
+                                                    >
+                                                        Edit Message
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleDeleteMessage(m._id); }}
+                                                    style={{ padding: '8px 12px', textAlign: 'left', background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}
+                                                    onMouseEnter={e => e.target.style.background = 'rgba(239, 68, 68, 0.1)'}
+                                                    onMouseLeave={e => e.target.style.background = 'transparent'}
+                                                >
+                                                    Delete for Everyone
+                                                </button>
+                                            </div>
+                                        )}
 
                                         {isSelf && openReceiptId === m._id && (
                                             <div
