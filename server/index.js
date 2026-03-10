@@ -159,6 +159,31 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('leave-room', async ({ roomCode, user }) => {
+        socket.leave(roomCode)
+        const room = await Room.findOne({ code: roomCode })
+        if (room) {
+            const userObj = room.users.find(u => u.socketId === socket.id)
+            if (userObj && roomTypingUsers[roomCode]) {
+                roomTypingUsers[roomCode].delete(userObj.name)
+                io.to(roomCode).emit('users-typing', Array.from(roomTypingUsers[roomCode]))
+            }
+
+            await Room.findOneAndUpdate(
+                { code: roomCode },
+                { $pull: { users: { socketId: socket.id } } }
+            )
+            const updatedRoom = await Room.findOne({ code: roomCode })
+            if (updatedRoom && updatedRoom.users.length === 0 && updatedRoom.roomType === 'ghost') {
+                await Message.deleteMany({ roomCode })
+                await Room.deleteOne({ code: roomCode })
+                io.to(roomCode).emit('room-closed')
+            } else {
+                io.to(roomCode).emit('user-left', updatedRoom ? updatedRoom.users : [])
+            }
+        }
+    })
+
     socket.on('disconnecting', async () => {
         for (const roomCode of socket.rooms) {
             if (roomCode === socket.id) continue
@@ -181,7 +206,7 @@ io.on('connection', (socket) => {
                     await Room.deleteOne({ code: roomCode })
                     io.to(roomCode).emit('room-closed')
                 } else {
-                    io.to(roomCode).emit('user-joined', updatedRoom ? updatedRoom.users : [])
+                    io.to(roomCode).emit('user-left', updatedRoom ? updatedRoom.users : [])
                 }
             }
         }
