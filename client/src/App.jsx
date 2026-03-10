@@ -8,12 +8,12 @@ const App = () => {
   const [loading, setLoading] = useState(true)
 
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('chupchat-theme') || 'dark';
+    return localStorage.getItem('onyx-theme') || 'dark';
   });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('chupchat-theme', theme);
+    localStorage.setItem('onyx-theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {
@@ -46,7 +46,7 @@ const App = () => {
           marginTop: '1rem',
           fontSize: '1.1rem'
         }}>
-          Loading ChupChat...
+          Loading Onyx...
         </p>
       </div>
     )

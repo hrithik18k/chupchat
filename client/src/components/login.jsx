@@ -37,10 +37,7 @@ const Login = ({ setUser, theme, toggleTheme }) => {
             </button>
             <div className="login-left">
                 <div style={{ textAlign: 'center', maxWidth: '400px', zIndex: 1 }}>
-                    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '2rem' }}>
-                        <rect x="3" y="3" width="18" height="18" rx="4" fill="var(--accent-primary)" fillOpacity="0.1" stroke="var(--accent-primary)" strokeWidth="2" />
-                        <path d="M8 12h8m-8-4h8m-8 8h5" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
+                    <img src="/onyx-logo.png" alt="Onyx Logo" width="120" height="120" style={{ marginBottom: '2rem', borderRadius: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }} />
                     <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '3rem', margin: '0 0 1rem 0' }}>Secure. Fast.<br />Encrypted.</h1>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', lineHeight: '1.6', margin: '0' }}>
                         Experience an enterprise-grade, zero-compromise real-time communication platform.

@@ -360,8 +360,11 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                     {theme === 'dark' ? '☀️' : '🌙'}
                 </button>
                 <div className="room-card">
-                    <h2>Secure Rooms</h2>
-                    <p>End-to-end encrypted communication.</p>
+                    <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+                        <img src="/onyx-logo.png" alt="Onyx Logo" width="64" height="64" style={{ borderRadius: '14px' }} />
+                    </div>
+                    <h2 style={{ textAlign: 'center' }}>Secure Rooms</h2>
+                    <p style={{ textAlign: 'center' }}>End-to-end encrypted communication.</p>
 
                     <div className="tab-buttons">
                         <button
@@ -529,7 +532,8 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                         </button>
                         <div className="chat-title">
                             <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                Project Channel
+                                <img src="/onyx-logo.png" alt="Onyx Logo" width="24" height="24" style={{ borderRadius: '6px' }} />
+                                Onyx
                                 {currentRoomType === 'ghost' && (
                                     <span style={{ background: '#4b5563', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold' }}>👻 Ghost</span>
                                 )}

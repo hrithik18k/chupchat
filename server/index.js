@@ -27,7 +27,7 @@ mongoose.connect(process.env.MONGO_URI)
     .catch(err => console.log('DB Error:', err))
 
 app.get('/', (req, res) => {
-    res.send('ChupChat backend is running 🚀')
+    res.send('Onyx backend is running 🚀')
 })
 
 const roomTypingUsers = {}
