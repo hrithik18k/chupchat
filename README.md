@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🔒 [ChupChat](https://chupchat-1.onrender.com/)
+# 🔒 [Onyx](https://chupchat-1.onrender.com/)
 **Enterprise-Grade Secure & Encrypted Real-Time Chat Architecture**
 
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
@@ -18,9 +18,9 @@
 
 ## ⚡ Overview
 
-**ChupChat** is an advanced, premium-tier real-time chat application engineered for maximum privacy, security, and elegance. Built entirely on the MERN stack with highly scaled WebSockets, it leverages military-grade AES encryption to guard its messages and pairs it with an aggressively minimal, luxury glassmorphism interface. 
+**Onyx** is an advanced, premium-tier real-time chat application engineered for maximum privacy, security, and elegance. Built entirely on the MERN stack with highly scaled WebSockets, it leverages military-grade AES encryption to guard its messages and pairs it with an aggressively minimal, luxury glassmorphism interface. 
 
-It is designed to give users a pristine, ad-free environment where text data remains inherently their own. Recently upgraded with advanced socket telemetry, ChupChat now features intelligent read receipts, persistent typing presence, conditional room destruction models, and reactive theming.
+It is designed to give users a pristine, ad-free environment where text data remains inherently their own. Recently upgraded with advanced socket telemetry, Onyx now features intelligent read receipts, persistent typing presence, conditional room destruction models, and reactive theming.
 
 ## ✨ Key Features & Capabilities
 
@@ -103,13 +103,13 @@ Boot the frontend client application:
 ```bash
 npm run dev
 ```
-Navigate to `http://localhost:5173` to experience ChupChat locally.
+Navigate to `http://localhost:5173` to experience Onyx locally.
 
 ---
 
 ## 🎨 Design System
 
-ChupChat relies exclusively on custom aesthetic tokens to maintain its dual-mode luxury UI. 
+Onyx relies exclusively on custom aesthetic tokens to maintain its dual-mode luxury UI. 
 - **Typefaces:** [Syne](https://fonts.google.com/specimen/Syne) (Headings) / [DM Sans](https://fonts.google.com/specimen/DM+Sans) (Conversational flow)
 - **Deep Slate (Dark Mode):** Subsurface map routed natively to `#050B18`.
 - **Pure Canvas (Light Mode):** Subsurface mapping dynamically swapping to `#f1f5f9` against `#ffffff` surfaces.
@@ -122,7 +122,7 @@ ChupChat relies exclusively on custom aesthetic tokens to maintain its dual-mode
 - The `VITE_SECRET_KEY` acts as the master-key matrix for decoding all incoming encrypted payloads on the client-side. For total security during deployment, rotate this key randomly and ensure it does not leak into public version control.
 
 ## 🤝 Contributing
-Contributions are absolutely welcome to help expand the telemetric capabilities of ChupChat.
+Contributions are absolutely welcome to help expand the telemetric capabilities of Onyx.
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
 3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
