@@ -30,15 +30,24 @@ const Login = ({ setUser, theme, toggleTheme }) => {
             <button
                 className="theme-toggle-btn"
                 onClick={toggleTheme}
-                style={{ position: 'absolute', top: '20px', right: '20px' }}
+                style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}
                 title="Toggle Theme"
             >
                 {theme === 'dark' ? '☀️' : '🌙'}
             </button>
+
             <div className="login-left">
-                <div style={{ textAlign: 'center', maxWidth: '400px', zIndex: 1 }}>
-                    <img src="/onyx-logo.png" alt="Onyx Logo" width="120" height="120" style={{ marginBottom: '2rem', borderRadius: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }} />
-                    <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '3rem', margin: '0 0 1rem 0' }}>Secure. Fast.<br />Encrypted.</h1>
+                <div style={{ textAlign: 'center', maxWidth: '400px', zIndex: 1, position: 'relative' }}>
+                    <img
+                        src="/onyx-logo.png"
+                        alt="Onyx Logo"
+                        width="120"
+                        height="120"
+                        style={{ marginBottom: '2rem', borderRadius: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}
+                    />
+                    <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '3rem', margin: '0 0 1rem 0' }}>
+                        Secure. Fast.<br />Encrypted.
+                    </h1>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', lineHeight: '1.6', margin: '0' }}>
                         Experience an enterprise-grade, zero-compromise real-time communication platform.
                     </p>

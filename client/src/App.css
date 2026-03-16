@@ -160,6 +160,8 @@ h6 {
 
 .login-left {
   display: none;
+  min-height: 100%;
+  height: 100%;
 }
 
 .login-right {
@@ -860,17 +862,8 @@ h6 {
     padding: 3rem;
     position: relative;
     overflow: hidden;
-  }
-
-  .login-left::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 100vw;
-    height: 100vw;
-    background: radial-gradient(circle, rgba(91, 95, 255, 0.05) 0%, transparent 50%);
-    pointer-events: none;
+    height: 100%;
+    min-height: 100vh;
   }
 
   /* Chat layout desktop */
@@ -895,6 +888,63 @@ h6 {
   .chat-input-area {
     padding: 1rem 3rem;
   }
+}
+
+/* ===== CURSOR / MICRO-INTERACTION ENHANCEMENTS ===== */
+
+/* Smooth color shift on all anchor links */
+a, .link-hover {
+  transition: color 0.22s ease, opacity 0.22s ease;
+}
+
+a:hover {
+  opacity: 0.85;
+}
+
+/* Nav / inline button micro hover */
+.btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.06);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.btn:hover:not(:disabled)::after {
+  opacity: 1;
+}
+
+/* Download / primary CTA - cursor fills on hover */
+.btn-primary {
+  background-color: var(--accent-primary);
+  color: #fff;
+  transition: background-color 0.22s ease, box-shadow 0.22s ease, transform 0.15s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+  box-shadow: 0 4px 18px rgba(91, 95, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+/* Inline link hover (Docs, Twitter-style links in messages) */
+.message-content a {
+  color: #93c5fd;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.18s ease;
+}
+
+.message-content a:hover {
+  color: #60a5fa;
 }
 
 /* Utilities */
