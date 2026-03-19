@@ -979,3 +979,205 @@ a:hover {
     opacity: 1;
   }
 }
+
+/* ===== ONYX CIPHER — AI PARTICIPANT STYLES ===== */
+
+/* Cipher message wrapper */
+.cipher-message {
+  align-self: flex-start;
+  max-width: 88%;
+  animation: cipherSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Cipher sender label */
+.cipher-sender {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: #a78bfa;
+  margin-bottom: 4px;
+  padding: 0 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Cipher lock avatar */
+.cipher-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #7c3aed 0%, #5B5FFF 50%, #a78bfa 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+}
+
+/* Cipher message bubble */
+.cipher-bubble {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.12) 0%, rgba(91, 95, 255, 0.08) 100%) !important;
+  border: 1px solid rgba(124, 58, 237, 0.25) !important;
+  border-left: 3px solid #7c3aed !important;
+  border-bottom-left-radius: 4px !important;
+  color: var(--text-primary) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.cipher-bubble::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.05) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Cipher bubble in light theme */
+[data-theme="light"] .cipher-bubble {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(79, 70, 229, 0.05) 100%) !important;
+  border-color: rgba(124, 58, 237, 0.2) !important;
+}
+
+/* Override sent color for Cipher content */
+.cipher-bubble .message-content {
+  color: var(--text-primary);
+}
+
+.cipher-bubble .message-content code {
+  background: rgba(124, 58, 237, 0.15);
+  color: #c4b5fd;
+}
+
+[data-theme="light"] .cipher-bubble .message-content code {
+  background: rgba(124, 58, 237, 0.1);
+  color: #6d28d9;
+}
+
+.cipher-bubble .message-content pre {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: rgba(124, 58, 237, 0.15);
+}
+
+[data-theme="light"] .cipher-bubble .message-content pre {
+  background: rgba(124, 58, 237, 0.06);
+  border-color: rgba(124, 58, 237, 0.12);
+}
+
+.cipher-bubble .message-content pre code {
+  color: var(--text-primary);
+}
+
+.cipher-bubble .message-content a {
+  color: #a78bfa;
+}
+
+.cipher-bubble .message-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+  font-size: 0.85em;
+}
+
+.cipher-bubble .message-content th,
+.cipher-bubble .message-content td {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  text-align: left;
+}
+
+.cipher-bubble .message-content th {
+  background: rgba(124, 58, 237, 0.1);
+  font-weight: 600;
+}
+
+.cipher-bubble .message-content blockquote {
+  border-left: 3px solid #7c3aed;
+  padding-left: 0.75rem;
+  margin: 0.5rem 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Cipher badge */
+.cipher-badge {
+  font-size: 0.65rem;
+  color: #a78bfa;
+  background: rgba(124, 58, 237, 0.1);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-left: 4px;
+}
+
+[data-theme="light"] .cipher-badge {
+  background: rgba(124, 58, 237, 0.08);
+  color: #6d28d9;
+}
+
+/* Cipher thinking indicator */
+.cipher-thinking-dots {
+  display: flex;
+  gap: 4px;
+  padding: 4px 8px;
+  align-items: center;
+}
+
+.cipher-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c3aed, #a78bfa);
+  animation: cipherPulse 1.4s infinite ease-in-out both;
+}
+
+.cipher-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.cipher-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+.cipher-thinking-pulse {
+  animation: cipherAvatarPulse 1.5s infinite ease-in-out;
+}
+
+@keyframes cipherPulse {
+  0%, 80%, 100% {
+    transform: scale(0.5);
+    opacity: 0.3;
+    background: #7c3aed;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+    background: #a78bfa;
+  }
+}
+
+@keyframes cipherAvatarPulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+  }
+  50% {
+    box-shadow: 0 2px 16px rgba(124, 58, 237, 0.6);
+  }
+}
+
+@keyframes cipherSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
