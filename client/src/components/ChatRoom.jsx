@@ -40,6 +40,10 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
     const [openContextMenuId, setOpenContextMenuId] = useState(null)
     const [cipherThinking, setCipherThinking] = useState(false)
     const [cipherHintVisible, setCipherHintVisible] = useState(false)
+    const [roomCreatorName, setRoomCreatorName] = useState('')
+    const [deleteRequestPending, setDeleteRequestPending] = useState(false)
+    const [incomingDeleteRequest, setIncomingDeleteRequest] = useState(null) // { requesterName }
+    const [showRoomDeletedToast, setShowRoomDeletedToast] = useState('')
     const messagesEndRef = useRef(null)
     const messagesContainerRef = useRef(null)
     const typingTimeoutRef = useRef(null)
@@ -57,12 +61,14 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
             if (success) {
                 setJoined(true)
                 setError('')
+                setRoomCreatorName(user.name) // creator is always the current user
             }
         })
 
-        socket.on('room-joined', ({ users, pastMessages, roomType }) => {
+        socket.on('room-joined', ({ users, pastMessages, roomType, createdByName }) => {
             setUsers(users)
             setCurrentRoomType(roomType || 'normal');
+            setRoomCreatorName(createdByName || '')
             const decrypted = pastMessages.map(m => ({
                 _id: m._id,
                 sender: m.sender,
@@ -142,6 +148,51 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
             }))
         })
 
+        // Room deleted (by creator or approved request)
+        socket.on('room-deleted', ({ message }) => {
+            setShowRoomDeletedToast(message)
+            setTimeout(() => {
+                setShowRoomDeletedToast('')
+                setJoined(false)
+                setRoomCode('')
+                setPassword('')
+                setMessages([])
+                setUsers([])
+                setError('')
+                setMode('join')
+                setRoomCreatorName('')
+                setDeleteRequestPending(false)
+                setIncomingDeleteRequest(null)
+            }, 2500)
+        })
+
+        // Incoming delete request — shown to creator
+        socket.on('incoming-delete-request', ({ roomCode: rc, requesterName }) => {
+            setIncomingDeleteRequest({ requesterName })
+        })
+
+        // Delete request was rejected by creator — notify requester
+        socket.on('delete-request-rejected', ({ requesterName }) => {
+            setDeleteRequestPending(false)
+            if (requesterName === user.name) {
+                setMessages(prev => [...prev, {
+                    sender: 'System',
+                    message: '🚫 Your room deletion request was declined by the creator.',
+                    timestamp: new Date().toISOString()
+                }])
+            }
+        })
+
+        // Creator offline response
+        socket.on('delete-request-result', ({ status, message: msg }) => {
+            setDeleteRequestPending(false)
+            setMessages(prev => [...prev, {
+                sender: 'System',
+                message: `⚠️ ${msg}`,
+                timestamp: new Date().toISOString()
+            }])
+        })
+
         const handleRoomClosed = () => {
             setShowGhostToast(true);
             setTimeout(() => {
@@ -172,6 +223,10 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
             socket.off('users-typing')
             socket.off('seen-update')
             socket.off('room-closed', handleRoomClosed)
+            socket.off('room-deleted')
+            socket.off('incoming-delete-request')
+            socket.off('delete-request-rejected')
+            socket.off('delete-request-result')
         }
     }, [roomCode, user.name, users, user])
 
@@ -383,6 +438,35 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
     const handleReturnHome = () => {
         if (window.confirm('Are you sure you want to leave this room?')) {
             handleReturnHomeSilent();
+        }
+    }
+
+    // Creator: directly delete the room
+    const handleDeleteRoom = () => {
+        if (window.confirm('⚠️ This will permanently delete the room and ALL messages for everyone. Continue?')) {
+            socket.emit('delete-room', { roomCode, userName: user.name })
+        }
+    }
+
+    // Non-creator: request that the creator deletes
+    const handleRequestDeleteRoom = () => {
+        if (deleteRequestPending) return
+        setDeleteRequestPending(true)
+        socket.emit('request-delete-room', { roomCode, requesterName: user.name })
+        setMessages(prev => [...prev, {
+            sender: 'System',
+            message: '📨 Your deletion request has been sent to the room creator.',
+            timestamp: new Date().toISOString()
+        }])
+    }
+
+    // Creator: approve or reject incoming deletion request
+    const handleIncomingDeleteResponse = (approved) => {
+        if (approved) {
+            socket.emit('approve-delete-room', { roomCode, userName: user.name })
+        } else {
+            socket.emit('reject-delete-room', { roomCode, requesterName: incomingDeleteRequest?.requesterName })
+            setIncomingDeleteRequest(null)
         }
     }
 
@@ -604,7 +688,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                 </div>
 
                 <div className="sidebar-footer">
-                    <button className="btn btn-outline" style={{ color: 'var(--danger)', borderColor: 'rgba(239,68,68,0.2)' }} onClick={handleReturnHome}>
+                    <button className="btn btn-outline" style={{ color: 'var(--danger)', borderColor: 'rgba(239,68,68,0.2)', marginBottom: '0.5rem' }} onClick={handleReturnHome}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                             <polyline points="16 17 21 12 16 7"></polyline>
@@ -612,6 +696,37 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                         </svg>
                         Leave Room
                     </button>
+
+                    {/* Creator gets a direct Delete Room button */}
+                    {roomCreatorName && user.name === roomCreatorName && (
+                        <button
+                            className="btn btn-delete-room"
+                            onClick={handleDeleteRoom}
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                                <path d="M10 11v6"></path>
+                                <path d="M14 11v6"></path>
+                                <path d="M9 6V4h6v2"></path>
+                            </svg>
+                            Delete Room
+                        </button>
+                    )}
+
+                    {/* Non-creator gets a Request to Delete button */}
+                    {roomCreatorName && user.name !== roomCreatorName && (
+                        <button
+                            className={`btn btn-request-delete ${deleteRequestPending ? 'pending' : ''}`}
+                            onClick={handleRequestDeleteRoom}
+                            disabled={deleteRequestPending}
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.5 19.79 19.79 0 0 1 1.63 4.9 2 2 0 0 1 3.6 2.69h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10a16 16 0 0 0 6 6l.93-.93a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17.5l.19-.58z"></path>
+                            </svg>
+                            {deleteRequestPending ? 'Request Sent…' : 'Request to Delete'}
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -619,6 +734,38 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                 {showGhostToast && (
                     <div className="ghost-toast" style={{ position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(239,68,68,0.9)', color: 'white', padding: '10px 20px', borderRadius: '20px', zIndex: 100, fontWeight: 'bold', fontSize: '0.9rem', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
                         This Ghost Room has been dissolved.
+                    </div>
+                )}
+                {showRoomDeletedToast && (
+                    <div className="room-deleted-toast">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                            <path d="M9 6V4h6v2"></path>
+                        </svg>
+                        {showRoomDeletedToast}
+                    </div>
+                )}
+                {/* Incoming delete request notification — visible only to creator */}
+                {incomingDeleteRequest && (
+                    <div className="delete-request-notification">
+                        <div className="delete-request-content">
+                            <div className="delete-request-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                </svg>
+                            </div>
+                            <div className="delete-request-text">
+                                <strong>{incomingDeleteRequest.requesterName}</strong> is requesting to delete this room.
+                                <span>This will permanently erase all messages.</span>
+                            </div>
+                        </div>
+                        <div className="delete-request-actions">
+                            <button className="dr-btn dr-btn-reject" onClick={() => handleIncomingDeleteResponse(false)}>Reject</button>
+                            <button className="dr-btn dr-btn-approve" onClick={() => handleIncomingDeleteResponse(true)}>Approve &amp; Delete</button>
+                        </div>
                     </div>
                 )}
                 <div className="chat-header">

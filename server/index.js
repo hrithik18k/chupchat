@@ -128,6 +128,7 @@ io.on('connection', (socket) => {
         room = await Room.create({
             code: roomCode,
             createdBy: user.email || 'guest_' + socket.id,
+            createdByName: user.name || '',
             password,
             roomType: roomType || 'normal',
             users: [{ name: user.name, socketId: socket.id }]
@@ -164,7 +165,12 @@ io.on('connection', (socket) => {
         const usersInRoom = updatedRoom.users.map(u => ({ name: u.name, id: u.socketId }))
         const pastMessages = await Message.find({ roomCode })
 
-        socket.emit('room-joined', { users: usersInRoom, pastMessages, roomType: updatedRoom.roomType })
+        socket.emit('room-joined', {
+            users: usersInRoom,
+            pastMessages,
+            roomType: updatedRoom.roomType,
+            createdByName: updatedRoom.createdByName || ''
+        })
         io.to(roomCode).emit('user-joined', usersInRoom)
     })
     socket.on('send-message', async ({ roomCode, encryptedMessage, sender, timestamp }) => {
@@ -243,6 +249,70 @@ io.on('connection', (socket) => {
             socket.emit('edit-error', { error: 'Internal server error while editing message' });
         }
     });
+
+    // ── Room Deletion Flow ────────────────────────────────────────────────────
+    // Creator deletes directly
+    socket.on('delete-room', async ({ roomCode, userName }) => {
+        try {
+            const room = await Room.findOne({ code: roomCode })
+            if (!room) return socket.emit('room-error', 'Room not found')
+            if (room.createdByName !== userName) {
+                return socket.emit('room-error', 'Only the room creator can delete this room')
+            }
+            await Message.deleteMany({ roomCode })
+            await Room.deleteOne({ code: roomCode })
+            io.to(roomCode).emit('room-deleted', { message: `Room was deleted by ${userName}.` })
+            console.log(`Room ${roomCode} deleted by creator ${userName}`)
+        } catch (err) {
+            console.error('delete-room error:', err)
+            socket.emit('room-error', 'Failed to delete room')
+        }
+    })
+
+    // Non-creator requests deletion — server forwards to the creator
+    socket.on('request-delete-room', async ({ roomCode, requesterName }) => {
+        try {
+            const room = await Room.findOne({ code: roomCode })
+            if (!room) return
+            // Find the creator's current socket
+            const creatorUser = room.users.find(u => u.name === room.createdByName)
+            if (!creatorUser) {
+                // Creator is offline — let requester know
+                return socket.emit('delete-request-result', {
+                    status: 'offline',
+                    message: 'The room creator is not currently online.'
+                })
+            }
+            // Forward the request to the creator's socket
+            io.to(creatorUser.socketId).emit('incoming-delete-request', {
+                roomCode,
+                requesterName
+            })
+        } catch (err) {
+            console.error('request-delete-room error:', err)
+        }
+    })
+
+    // Creator approves — delete the room
+    socket.on('approve-delete-room', async ({ roomCode, userName }) => {
+        try {
+            const room = await Room.findOne({ code: roomCode })
+            if (!room) return
+            if (room.createdByName !== userName) return
+            await Message.deleteMany({ roomCode })
+            await Room.deleteOne({ code: roomCode })
+            io.to(roomCode).emit('room-deleted', { message: 'The room creator approved the deletion request. Room closed.' })
+            console.log(`Room ${roomCode} deleted after approval by creator ${userName}`)
+        } catch (err) {
+            console.error('approve-delete-room error:', err)
+        }
+    })
+
+    // Creator rejects — notify all in room
+    socket.on('reject-delete-room', ({ roomCode, requesterName }) => {
+        io.to(roomCode).emit('delete-request-rejected', { requesterName })
+    })
+    // ─────────────────────────────────────────────────────────────────────────
 
     socket.on('leave-room', async ({ roomCode, user }) => {
         socket.leave(roomCode)
