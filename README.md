@@ -241,26 +241,6 @@ Onyx uses a single CSS custom-property token system defined in `App.css`. Switch
 | `POST` | `/api/cipher` | Proxies a request to Groq. Accepts `{ systemPrompt, messages[] }`. Returns `{ reply }`. Rate-limited. |
 | `GET` | `/api/cipher/messages/:roomCode` | Returns the last 20 encrypted messages for a room (for Cipher context assembly). Returns `sender`, `encryptedMessage`, `timestamp` only. |
 
-### Key Socket Events
-
-| Event | Direction | Payload |
-|---|---|---|
-| `create-room` | Client → Server | `{ roomCode, user, password, roomType }` |
-| `join-room` | Client → Server | `{ roomCode, user, password }` |
-| `send-message` | Client → Server | `{ roomCode, encryptedMessage, sender, timestamp }` |
-| `edit-message` | Client → Server | `{ roomCode, messageId, newEncryptedMessage, userName }` |
-| `delete-message` | Client → Server | `{ roomCode, messageId, userName }` |
-| `mark-seen` | Client → Server | `{ roomCode, messageIds[], userName }` |
-| `typing` / `stop-typing` | Client → Server | `{ roomCode, user }` |
-| `delete-room` | Client → Server | `{ roomCode, userName }` (creator only) |
-| `request-delete-room` | Client → Server | `{ roomCode, requesterName }` |
-| `approve-delete-room` | Client → Server | `{ roomCode, userName }` |
-| `room-joined` | Server → Client | `{ users, pastMessages, roomType, createdByName }` |
-| `receive-message` | Server → Client | `{ _id, encryptedMessage, sender, timestamp }` |
-| `seen-update` | Server → Client | `[{ _id, seenBy[] }]` |
-| `users-typing` | Server → Client | `string[]` |
-| `room-deleted` | Server → Client | `{ message }` |
-| `room-closed` | Server → Client | *(Ghost room auto-destruction)* |
 
 ---
 
