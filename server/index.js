@@ -30,6 +30,91 @@ app.get('/', (req, res) => {
     res.send('Onyx backend is running 🚀')
 })
 
+// ── Cipher AI Proxy ─────────────────────────────────────────────────────────
+// Proxies requests to Groq API so the API key stays server-side.
+// The client sends already-decrypted context (assembled locally) and a prompt.
+// We NEVER store the plaintext — it's transient, used only for the API call.
+const cipherRateLimit = new Map()
+const CIPHER_RATE_LIMIT_WINDOW = 60 * 1000 // 1 minute
+const CIPHER_RATE_LIMIT_MAX = 10 // max 10 requests per minute per IP
+
+app.post('/api/cipher', async (req, res) => {
+    try {
+        // Basic rate limiting
+        const clientIP = req.ip || req.connection.remoteAddress
+        const now = Date.now()
+        const clientRequests = cipherRateLimit.get(clientIP) || []
+        const recentRequests = clientRequests.filter(t => now - t < CIPHER_RATE_LIMIT_WINDOW)
+        
+        if (recentRequests.length >= CIPHER_RATE_LIMIT_MAX) {
+            return res.status(429).json({ error: 'Too many requests. Please wait a moment.' })
+        }
+        recentRequests.push(now)
+        cipherRateLimit.set(clientIP, recentRequests)
+
+        const { systemPrompt, messages } = req.body
+
+        if (!messages || !Array.isArray(messages) || messages.length === 0) {
+            return res.status(400).json({ error: 'Messages array is required' })
+        }
+
+        const groqApiKey = process.env.GROQ_API_KEY
+        if (!groqApiKey) {
+            console.error('GROQ_API_KEY not set in environment variables')
+            return res.status(500).json({ error: 'AI service not configured' })
+        }
+
+        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${groqApiKey}`
+            },
+            body: JSON.stringify({
+                model: 'llama-3.3-70b-versatile',
+                messages: [
+                    { role: 'system', content: systemPrompt || 'You are a helpful assistant.' },
+                    ...messages
+                ],
+                max_tokens: 1024,
+                temperature: 0.7
+            })
+        })
+
+        if (!groqRes.ok) {
+            const errBody = await groqRes.text()
+            console.error('Groq API error:', groqRes.status, errBody)
+            return res.status(502).json({ error: 'AI service returned an error' })
+        }
+
+        const data = await groqRes.json()
+        const reply = data.choices?.[0]?.message?.content || 'No response generated.'
+
+        res.json({ reply })
+    } catch (error) {
+        console.error('Cipher proxy error:', error)
+        res.status(500).json({ error: 'Internal server error' })
+    }
+})
+
+// Fetch last N encrypted messages for Cipher context assembly
+// Note: Only encrypted data is returned — client handles decryption
+app.get('/api/cipher/messages/:roomCode', async (req, res) => {
+    try {
+        const { roomCode } = req.params
+        const messages = await Message.find({ roomCode })
+            .sort({ timestamp: -1 })
+            .limit(20)
+            .select('sender encryptedMessage timestamp')
+            .lean()
+        res.json(messages.reverse())
+    } catch (error) {
+        console.error('Cipher messages fetch error:', error)
+        res.status(500).json({ error: 'Failed to fetch messages' })
+    }
+})
+// ─────────────────────────────────────────────────────────────────────────────
+
 const roomTypingUsers = {}
 
 io.on('connection', (socket) => {

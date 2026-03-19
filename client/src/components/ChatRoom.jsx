@@ -4,6 +4,7 @@ import CryptoJS from 'crypto-js'
 import QRCode from 'react-qr-code'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import { parseCipherCommand, invokeCipher } from '../utils/cipher.js'
 
 const socket = io(import.meta.env.DEV ? 'http://localhost:5000' : 'https://chupchat.onrender.com')
 const secretKey = import.meta.env.VITE_SECRET_KEY
@@ -37,6 +38,8 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
     const [editingMessageId, setEditingMessageId] = useState(null)
     const [editText, setEditText] = useState('')
     const [openContextMenuId, setOpenContextMenuId] = useState(null)
+    const [cipherThinking, setCipherThinking] = useState(false)
+    const [cipherHintVisible, setCipherHintVisible] = useState(false)
     const messagesEndRef = useRef(null)
     const messagesContainerRef = useRef(null)
     const typingTimeoutRef = useRef(null)
@@ -245,8 +248,78 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
         socket.emit('join-room', { roomCode, user, password })
     }
 
-    const sendMessage = () => {
+    const sendMessage = async () => {
         if (!message.trim()) return
+
+        // ── Cipher command interception ──
+        const cipherCmd = parseCipherCommand(message)
+        if (cipherCmd) {
+            // Block Cipher in Ghost rooms
+            if (currentRoomType === 'ghost') {
+                setMessages(prev => [...prev, {
+                    sender: 'Cipher',
+                    message: '🔒 Cipher is disabled in Ghost rooms to protect maximum privacy.',
+                    timestamp: new Date().toISOString(),
+                    seenBy: [],
+                    edited: false,
+                    isCipherLocal: true
+                }])
+                setMessage('')
+                return
+            }
+
+            // Show user's @cipher message first
+            const userEncrypted = CryptoJS.AES.encrypt(message, secretKey).toString()
+            const userTimestamp = new Date().toISOString()
+            socket.emit('send-message', { roomCode, encryptedMessage: userEncrypted, sender: user.name, timestamp: userTimestamp })
+            setMessage('')
+            socket.emit('stop-typing', { roomCode, user: user.name })
+
+            // Show thinking state
+            setCipherThinking(true)
+            setIsAtBottom(true)
+
+            try {
+                // Fetch raw encrypted messages for context
+                const rawMessages = await fetch(
+                    `${import.meta.env.DEV ? 'http://localhost:5000' : 'https://chupchat.onrender.com'}/api/cipher/messages/${roomCode}`
+                ).then(r => r.ok ? r.json() : []).catch(() => [])
+
+                const { encryptedReply } = await invokeCipher({
+                    command: cipherCmd.command,
+                    args: cipherCmd.args,
+                    encryptedMessages: rawMessages.length > 0 ? rawMessages : messages.map(m => ({
+                        sender: m.sender,
+                        encryptedMessage: CryptoJS.AES.encrypt(m.message, secretKey).toString()
+                    })),
+                    lastUserMessage: message
+                })
+
+                // Send Cipher's reply as a message in the room
+                const cipherTimestamp = new Date().toISOString()
+                socket.emit('send-message', {
+                    roomCode,
+                    encryptedMessage: encryptedReply,
+                    sender: 'Cipher',
+                    timestamp: cipherTimestamp
+                })
+            } catch (err) {
+                console.error('Cipher error:', err)
+                setMessages(prev => [...prev, {
+                    sender: 'Cipher',
+                    message: '⚠️ Something went wrong. Please try again.',
+                    timestamp: new Date().toISOString(),
+                    seenBy: [],
+                    edited: false,
+                    isCipherLocal: true
+                }])
+            } finally {
+                setCipherThinking(false)
+            }
+            return
+        }
+        // ── End Cipher interception ──
+
         const encryptedMessage = CryptoJS.AES.encrypt(message, secretKey).toString()
         const timestamp = new Date().toISOString()
         socket.emit('send-message', { roomCode, encryptedMessage, sender: user.name, timestamp })
@@ -257,6 +330,11 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
 
     const handleTyping = (e) => {
         setMessage(e.target.value)
+
+        // Show/hide @cipher hint
+        const val = e.target.value.toLowerCase()
+        setCipherHintVisible(val.startsWith('@cipher') && val.length <= 8)
+
         if (e.target.value.length > 0) {
             socket.emit('typing', { roomCode, user: user.name })
             if (typingTimeoutRef.current) {
@@ -584,6 +662,33 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                                     return <div key={i} className="system-message">{m.message}</div>
                                 }
 
+                                // ── Cipher message rendering ──
+                                if (m.sender === 'Cipher') {
+                                    return (
+                                        <div key={i} className="message-wrapper cipher-message" style={{ position: 'relative' }}>
+                                            <div className="cipher-sender">
+                                                <div className="cipher-avatar">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                                    </svg>
+                                                </div>
+                                                <span>✦ Cipher</span>
+                                            </div>
+                                            <div className="message-bubble cipher-bubble">
+                                                <div
+                                                    className="message-content"
+                                                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(m.message, { breaks: true })) }}
+                                                />
+                                            </div>
+                                            <div className="message-footer">
+                                                <span>{formatTimestamp(m.timestamp)}</span>
+                                                <span className="cipher-badge">AI · E2E</span>
+                                            </div>
+                                        </div>
+                                    )
+                                }
+
                                 const isSelf = m.sender === user.name;
                                 return (
                                     <div key={i} data-message-id={!isSelf ? m._id : undefined} className={`message-wrapper ${isSelf ? 'sent' : 'received'}`} style={{ position: 'relative' }}>
@@ -734,6 +839,28 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                                 )
                             })}
 
+                            {/* Cipher thinking indicator */}
+                            {cipherThinking && (
+                                <div className="message-wrapper cipher-message">
+                                    <div className="cipher-sender">
+                                        <div className="cipher-avatar cipher-thinking-pulse">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                            </svg>
+                                        </div>
+                                        <span>✦ Cipher is thinking</span>
+                                    </div>
+                                    <div className="message-bubble cipher-bubble">
+                                        <div className="cipher-thinking-dots">
+                                            <div className="cipher-dot"></div>
+                                            <div className="cipher-dot"></div>
+                                            <div className="cipher-dot"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {(() => {
                                 const othersTyping = typingUsers.filter(u => u !== user.name);
                                 if (othersTyping.length === 0) return null;
@@ -789,7 +916,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                             onChange={handleTyping}
                             onBlur={handleStopTyping}
                             onKeyDown={handleKeyPress}
-                            placeholder="Message"
+                            placeholder={currentRoomType === 'ghost' ? 'Message (Cipher disabled)' : 'Message · type @cipher for AI'}
                             rows={1}
                         />
                     </div>
