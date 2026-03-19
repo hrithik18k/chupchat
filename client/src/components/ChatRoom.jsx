@@ -1086,7 +1086,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                             onChange={handleTyping}
                             onBlur={handleStopTyping}
                             onKeyDown={handleKeyPress}
-                            placeholder={currentRoomType === 'ghost' ? 'Message (Cipher disabled)' : 'Message · type @cipher for AI'}
+                            placeholder={currentRoomType === 'ghost' ? 'Message (Cipher disabled)' : 'Type @cipher for AI'}
                             rows={1}
                         />
                     </div>
