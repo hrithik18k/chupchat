@@ -268,10 +268,15 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                 return
             }
 
-            // Show user's @cipher message first
-            const userEncrypted = CryptoJS.AES.encrypt(message, secretKey).toString()
-            const userTimestamp = new Date().toISOString()
-            socket.emit('send-message', { roomCode, encryptedMessage: userEncrypted, sender: user.name, timestamp: userTimestamp })
+            // Show user's @cipher message locally (don't broadcast the command)
+            setMessages(prev => [...prev, {
+                sender: user.name,
+                message: message,
+                timestamp: new Date().toISOString(),
+                seenBy: [],
+                edited: false,
+                isCipherLocal: true
+            }])
             setMessage('')
             socket.emit('stop-typing', { roomCode, user: user.name })
 
@@ -285,7 +290,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                     `${import.meta.env.DEV ? 'http://localhost:5000' : 'https://chupchat.onrender.com'}/api/cipher/messages/${roomCode}`
                 ).then(r => r.ok ? r.json() : []).catch(() => [])
 
-                const { encryptedReply } = await invokeCipher({
+                const { plainReply } = await invokeCipher({
                     command: cipherCmd.command,
                     args: cipherCmd.args,
                     encryptedMessages: rawMessages.length > 0 ? rawMessages : messages.map(m => ({
@@ -295,14 +300,15 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                     lastUserMessage: message
                 })
 
-                // Send Cipher's reply as a message in the room
-                const cipherTimestamp = new Date().toISOString()
-                socket.emit('send-message', {
-                    roomCode,
-                    encryptedMessage: encryptedReply,
+                // Add Cipher's reply LOCALLY — only visible to this user
+                setMessages(prev => [...prev, {
                     sender: 'Cipher',
-                    timestamp: cipherTimestamp
-                })
+                    message: plainReply,
+                    timestamp: new Date().toISOString(),
+                    seenBy: [],
+                    edited: false,
+                    isCipherLocal: true
+                }])
             } catch (err) {
                 console.error('Cipher error:', err)
                 setMessages(prev => [...prev, {
@@ -564,6 +570,22 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                                 level="M"
                             />
                         </div>
+                        <div className="room-type-badge">
+                            {currentRoomType === 'normal' && (
+                                <span className="room-badge room-badge-normal">🔓 Normal Room</span>
+                            )}
+                            {currentRoomType === 'ghost' && (
+                                <span className="room-badge room-badge-ghost">👻 Ghost Room</span>
+                            )}
+                            {currentRoomType === 'couples' && (
+                                <span className="room-badge room-badge-couples">💑 Couples Room</span>
+                            )}
+                            <span className="room-badge-desc">
+                                {currentRoomType === 'normal' && 'Messages are saved & encrypted'}
+                                {currentRoomType === 'ghost' && 'Auto-deletes when everyone leaves'}
+                                {currentRoomType === 'couples' && 'Private room, max 2 members'}
+                            </span>
+                        </div>
                     </div>
 
                     <div className="info-section">
@@ -684,6 +706,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                                             <div className="message-footer">
                                                 <span>{formatTimestamp(m.timestamp)}</span>
                                                 <span className="cipher-badge">AI · E2E</span>
+                                                <span className="cipher-private-tag">🔒 Only visible to you</span>
                                             </div>
                                         </div>
                                     )
