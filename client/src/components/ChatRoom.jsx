@@ -48,12 +48,14 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
     const messagesContainerRef = useRef(null)
     const typingTimeoutRef = useRef(null)
     const longPressTimeoutRef = useRef(null)
+    const autoJoinAttempted = useRef(false)
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const rCode = params.get('room');
         const pwd = params.get('pwd');
-        if (rCode && pwd) {
+        if (rCode && pwd && !autoJoinAttempted.current) {
+            autoJoinAttempted.current = true;
             socket.emit('join-room', { roomCode: rCode, user, password: pwd });
         }
 
@@ -62,6 +64,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                 setJoined(true)
                 setError('')
                 setRoomCreatorName(user.name) // creator is always the current user
+                window.history.pushState({}, '', `/?room=${roomCode}&pwd=${password}`)
             }
         })
 
@@ -81,6 +84,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
             setMessages(decrypted)
             setJoined(true)
             setError('')
+            window.history.pushState({}, '', `/?room=${roomCode}&pwd=${password}`)
             setTimeout(() => scrollToBottom(), 100)
         })
 
@@ -153,6 +157,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
             setShowRoomDeletedToast(message)
             setTimeout(() => {
                 setShowRoomDeletedToast('')
+                window.history.pushState({}, '', '/')
                 setJoined(false)
                 setRoomCode('')
                 setPassword('')
@@ -198,6 +203,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
             setTimeout(() => {
                 setShowGhostToast(false);
                 socket.emit('leave-room', { roomCode, user });
+                window.history.pushState({}, '', '/')
                 setJoined(false);
                 setRoomCode('');
                 setPassword('');
@@ -228,7 +234,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
             socket.off('delete-request-rejected')
             socket.off('delete-request-result')
         }
-    }, [roomCode, user.name, users, user])
+    }, [roomCode, password, user.name, users, user])
 
     useEffect(() => {
         const handleClickOutside = () => {
@@ -425,6 +431,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
 
     const handleReturnHomeSilent = () => {
         socket.emit('leave-room', { roomCode, user });
+        window.history.pushState({}, '', '/')
         setJoined(false)
         setRoomCode('')
         setPassword('')

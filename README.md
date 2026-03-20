@@ -13,7 +13,6 @@
 [![Socket.io](https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socket.io&logoColor=white)](https://socket.io/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
-
 [Live Demo](https://chupchat-1.onrender.com) · [Report Bug](https://github.com/hrithik18k/chupchat/issues) · [Request Feature](https://github.com/hrithik18k/chupchat/issues)
 
 </div>
