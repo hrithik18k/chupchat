@@ -5,8 +5,19 @@ import ParticleCanvas from './components/ParticleCanvas.jsx'
 import './App.css'
 
 const App = () => {
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('onyx-user')
+    return savedUser ? JSON.parse(savedUser) : null
+  })
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('onyx-user', JSON.stringify(user))
+    } else {
+      localStorage.removeItem('onyx-user')
+    }
+  }, [user])
 
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('onyx-theme') || 'dark';
