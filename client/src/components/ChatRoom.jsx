@@ -44,11 +44,25 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
     const [deleteRequestPending, setDeleteRequestPending] = useState(false)
     const [incomingDeleteRequest, setIncomingDeleteRequest] = useState(null) // { requesterName }
     const [showRoomDeletedToast, setShowRoomDeletedToast] = useState('')
+    const [recentRooms, setRecentRooms] = useState(() => {
+        const saved = localStorage.getItem(`onyx-recent-rooms-${user?.name || 'guest'}`);
+        return saved ? JSON.parse(saved) : [];
+    });
     const messagesEndRef = useRef(null)
     const messagesContainerRef = useRef(null)
     const typingTimeoutRef = useRef(null)
     const longPressTimeoutRef = useRef(null)
     const autoJoinAttempted = useRef(false)
+
+    const saveRecentRoom = (code, pwd) => {
+        if (!code) return;
+        setRecentRooms(prev => {
+            const filtered = prev.filter(r => r.roomCode !== code);
+            const updated = [{ roomCode: code, password: pwd, timestamp: Date.now() }, ...filtered].slice(0, 3);
+            localStorage.setItem(`onyx-recent-rooms-${user?.name || 'guest'}`, JSON.stringify(updated));
+            return updated;
+        });
+    };
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -64,6 +78,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                 setJoined(true)
                 setError('')
                 setRoomCreatorName(user.name) // creator is always the current user
+                saveRecentRoom(roomCode, password)
                 window.history.pushState({}, '', `/?room=${roomCode}&pwd=${password}`)
             }
         })
@@ -84,6 +99,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
             setMessages(decrypted)
             setJoined(true)
             setError('')
+            saveRecentRoom(roomCode, password)
             window.history.pushState({}, '', `/?room=${roomCode}&pwd=${password}`)
             setTimeout(() => scrollToBottom(), 100)
         })
@@ -540,6 +556,47 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                     </div>
                     <h2 style={{ textAlign: 'center' }}>Secure Rooms</h2>
                     <p style={{ textAlign: 'center' }}>End-to-end encrypted communication.</p>
+
+                    {recentRooms.length > 0 && (
+                        <div className="recent-rooms-section" style={{ marginTop: '1rem', marginBottom: '1.5rem', textAlign: 'left', background: 'var(--bg-secondary)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                            <h4 style={{ margin: '0 0 0.8rem 0', color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Recently Joined</h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {recentRooms.map((room, idx) => (
+                                    <div key={idx} style={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'space-between',
+                                        background: 'var(--bg-primary)', 
+                                        padding: '0.6rem 0.8rem', 
+                                        borderRadius: '8px',
+                                        border: '1px solid var(--border)',
+                                        transition: 'all 0.2s ease'
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <span style={{ fontSize: '1rem' }}>💬</span>
+                                            <span style={{ fontWeight: '600', color: 'var(--text-primary)', letterSpacing: '1px' }}>{room.roomCode}</span>
+                                        </div>
+                                        <button 
+                                            onClick={() => {
+                                                setRoomCode(room.roomCode);
+                                                setPassword(room.password);
+                                                socket.emit('join-room', { roomCode: room.roomCode, user, password: room.password });
+                                            }}
+                                            className="btn btn-primary"
+                                            style={{
+                                                padding: '0.3rem 0.8rem',
+                                                fontSize: '0.8rem',
+                                                minHeight: 'auto',
+                                                borderRadius: '6px'
+                                            }}
+                                        >
+                                            Rejoin
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="tab-buttons">
                         <button
