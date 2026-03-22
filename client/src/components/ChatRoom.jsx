@@ -53,6 +53,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
     const typingTimeoutRef = useRef(null)
     const longPressTimeoutRef = useRef(null)
     const autoJoinAttempted = useRef(false)
+    const sendBtnRef = useRef(null)
 
     const saveRecentRoom = (code, pwd) => {
         if (!code) return;
@@ -409,6 +410,15 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
         setMessage('')
         socket.emit('stop-typing', { roomCode, user: user.name });
         setIsAtBottom(true)
+        // Pop animation on send button
+        if (sendBtnRef.current) {
+            sendBtnRef.current.classList.remove('pop')
+            void sendBtnRef.current.offsetWidth // reflow
+            sendBtnRef.current.classList.add('pop')
+            sendBtnRef.current.addEventListener('animationend', () => {
+                sendBtnRef.current?.classList.remove('pop')
+            }, { once: true })
+        }
     }
 
     const handleTyping = (e) => {
@@ -541,20 +551,102 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
 
     if (!joined) {
         return (
-            <div className="room-selection-container" style={{ position: 'relative' }}>
+            <div className="room-selection-container" style={{ position: 'relative', overflow: 'hidden' }}>
+
+                {/* ── Animated security background ── */}
+                <div className="rsbg" aria-hidden="true">
+                    {/* Dot-grid */}
+                    <div className="rsbg-grid" />
+
+                    {/* Radar rings */}
+                    <div className="rsbg-ring rsbg-ring-1" />
+                    <div className="rsbg-ring rsbg-ring-2" />
+                    <div className="rsbg-ring rsbg-ring-3" />
+                    <div className="rsbg-ring rsbg-ring-4" />
+                    <div className="rsbg-ring rsbg-ring-5" />
+
+                    {/* Rotating sweep beam */}
+                    <div className="rsbg-sweep" />
+                    {/* Counter-rotating secondary sweep */}
+                    <div className="rsbg-sweep rsbg-sweep-2" />
+
+                    {/* Center glowing dot */}
+                    <div className="rsbg-center" />
+
+                    {/* Orbiting satellite dots */}
+                    <div className="rsbg-orbit">
+                        <div className="rsbg-orbit-dot rsbg-orbit-dot-1" />
+                        <div className="rsbg-orbit-dot rsbg-orbit-dot-2" />
+                        <div className="rsbg-orbit-dot rsbg-orbit-dot-3" />
+                        <div className="rsbg-orbit-dot rsbg-orbit-dot-4" />
+                    </div>
+
+                    {/* Matrix binary-rain columns */}
+                    {['01101', '10011', '11010', '00101', '10110', '01011', '11001'].map((bin, i) => (
+                        <div key={`rain-${i}`} className={`rsbg-rain rsbg-rain-${i + 1}`}>
+                            {Array.from({ length: 8 }).map((_, j) => (
+                                <span key={j} className={`rsbg-rain-char rsbg-rain-char-${j + 1}`}>
+                                    {['01', '10', '11', '00', '1', '0'][Math.floor((i + j) % 6)]}
+                                </span>
+                            ))}
+                        </div>
+                    ))}
+
+                    {/* Floating hexagon shapes */}
+                    <div className="rsbg-hex rsbg-hex-1" />
+                    <div className="rsbg-hex rsbg-hex-2" />
+                    <div className="rsbg-hex rsbg-hex-3" />
+                    <div className="rsbg-hex rsbg-hex-4" />
+
+                    {/* Data-packet flow lines */}
+                    <div className="rsbg-dataline rsbg-dataline-1"><div className="rsbg-packet" /></div>
+                    <div className="rsbg-dataline rsbg-dataline-2"><div className="rsbg-packet" /></div>
+                    <div className="rsbg-dataline rsbg-dataline-3"><div className="rsbg-packet" /></div>
+
+                    {/* Floating encrypted glyphs */}
+                    {['AES-256', '2FA', 'E2E', '🔒', 'RSA', 'SHA-3', '0x9F', '///'].map((g, i) => (
+                        <span key={i} className={`rsbg-glyph rsbg-glyph-${i + 1}`}>{g}</span>
+                    ))}
+
+                    {/* Corner HUD node markers */}
+                    <div className="rsbg-node rsbg-node-tl" />
+                    <div className="rsbg-node rsbg-node-tr" />
+                    <div className="rsbg-node rsbg-node-bl" />
+                    <div className="rsbg-node rsbg-node-br" />
+
+                    {/* Horizontal scan line */}
+                    <div className="rsbg-scanline" />
+                    {/* Second scan line (offset) */}
+                    <div className="rsbg-scanline rsbg-scanline-2" />
+                </div>
+                {/* ── /Animated security background ── */}
+
                 <button
                     className="theme-toggle-btn"
-                    onClick={toggleTheme}
+                    onClick={() => {
+                        toggleTheme();
+                        const btn = document.querySelector('.theme-toggle-btn');
+                        if (btn) {
+                            btn.classList.remove('spin');
+                            void btn.offsetWidth;
+                            btn.classList.add('spin');
+                            btn.addEventListener('animationend', () => btn.classList.remove('spin'), { once: true });
+                        }
+                    }}
                     style={{ position: 'absolute', top: '20px', right: '20px' }}
                     title="Toggle Theme"
                 >
                     {theme === 'dark' ? '☀️' : '🌙'}
                 </button>
-                <div className="room-card">
-                    <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-                        <img src="/onyx-logo.png" alt="Onyx Logo" width="64" height="64" style={{ borderRadius: '14px' }} />
+
+                <div className="room-card room-card-animated">
+                    {/* Animated spinning border layer */}
+                    <div className="room-card-border-spin" aria-hidden="true" />
+                    <div style={{ textAlign: 'center', marginBottom: '1rem', position: 'relative', zIndex: 1 }}>
+                        <img src="/onyx-logo.png" alt="Onyx Logo" width="64" height="64" className="room-card-logo" style={{ borderRadius: '14px' }} />
                     </div>
-                    <h2 style={{ textAlign: 'center' }}>Secure Rooms</h2>
+                    <h2 style={{ textAlign: 'center', position: 'relative', zIndex: 1 }} className="room-card-title">Secure Rooms</h2>
+
                     <p style={{ textAlign: 'center' }}>End-to-end encrypted communication.</p>
 
                     {recentRooms.length > 0 && (
@@ -740,8 +832,8 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                         <h3>Active Participants ({users.length})</h3>
                         <div className="users-list-wrapper">
                             {users.map((u, i) => (
-                                <div key={i} className="user-item">
-                                    <div className="user-avatar">
+                                <div key={i} className="user-item" style={{ animationDelay: `${i * 80}ms` }}>
+                                    <div className="user-avatar online">
                                         {u.name.charAt(0).toUpperCase()}
                                     </div>
                                     <span style={{ fontSize: '0.95rem' }}>{u.name} {u.name === user.name && '(You)'}</span>
@@ -1107,7 +1199,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                                 return (
                                     <div className="typing-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         {othersTyping.length === 1 && (
-                                            <div className="user-avatar" style={{ width: '28px', height: '28px', fontSize: '0.8rem', border: 'none', background: 'var(--accent-primary)', color: 'white' }}>
+                                            <div className="user-avatar typing-avatar-ring" style={{ width: '28px', height: '28px', fontSize: '0.8rem', border: 'none', background: 'var(--accent-primary)', color: 'white' }}>
                                                 {othersTyping[0].charAt(0).toUpperCase()}
                                             </div>
                                         )}
@@ -1135,7 +1227,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                 )}
 
                 <div className="chat-input-area">
-                    <div className="input-pill">
+                    <div className={`input-pill${message.toLowerCase().startsWith('@cipher') ? ' cipher-mode' : ''}`}>
                         <button className="emoji-btn">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="12" cy="12" r="10"></circle>
@@ -1153,8 +1245,12 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                             placeholder={currentRoomType === 'ghost' ? 'Message (Cipher disabled)' : 'Type @cipher for AI'}
                             rows={1}
                         />
+                        <span className={`char-counter${message.length > 100 ? ' visible' : ''}${message.length > 450 ? ' warn' : ''}`}>
+                            {message.length > 100 ? `${message.length}/500` : ''}
+                        </span>
                     </div>
                     <button
+                        ref={sendBtnRef}
                         className="send-btn"
                         onClick={sendMessage}
                         disabled={!message.trim()}

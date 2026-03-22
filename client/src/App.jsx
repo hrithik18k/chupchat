@@ -45,9 +45,9 @@ const App = () => {
 
   // ── Mouse-follower gradient ──────────────────────────────────────────────
   const gradientLayerRef = useRef(null)
-  const rafRef = useRef(null)
-  const targetPos = useRef({ x: 50, y: 50 })
-  const currentPos = useRef({ x: 50, y: 50 })
+  const rafRef           = useRef(null)
+  const targetPos        = useRef({ x: 50, y: 50 })
+  const currentPos       = useRef({ x: 50, y: 50 })
 
   const animateGradient = useCallback(() => {
     const LERP = 0.06
@@ -69,7 +69,7 @@ const App = () => {
 
   useEffect(() => {
     const onMouseMove = (e) => {
-      targetPos.current.x = (e.clientX / window.innerWidth) * 100
+      targetPos.current.x = (e.clientX / window.innerWidth)  * 100
       targetPos.current.y = (e.clientY / window.innerHeight) * 100
     }
     window.addEventListener('mousemove', onMouseMove)
@@ -92,7 +92,7 @@ const App = () => {
       }}>
         <div className="loading"></div>
         <p style={{
-          color: 'var(--text-muted)',
+          color: 'var(--text-secondary)',
           marginTop: '1rem',
           fontSize: '1.1rem'
         }}>
@@ -108,25 +108,49 @@ const App = () => {
       <div
         ref={gradientLayerRef}
         style={{
-          position: 'fixed',
-          inset: 0,
+          position:      'fixed',
+          inset:         0,
           pointerEvents: 'none',
-          zIndex: 0,
-          transition: 'background 0.15s ease',
+          zIndex:        0,
+          transition:    'background 0.15s ease',
         }}
       />
 
-      {/* Global particle vortex layer — visible only on non-chat pages */}
+      {/* Login page — full 140-particle vortex */}
       {!user && (
         <ParticleCanvas
+          variant="full"
+          theme={theme}
           style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 0,
+            position:      'fixed',
+            inset:         0,
+            zIndex:        0,
             pointerEvents: 'none',
-            opacity: 0.75,
+            opacity:       0.75,
           }}
         />
+      )}
+
+      {/* Chat page — ambient 70-particle vortex, lower opacity */}
+      {user && (
+        <div
+          className="ambient-canvas-wrapper"
+          style={{
+            position: 'fixed',
+            inset:    0,
+            zIndex:   0,
+          }}
+        >
+          <ParticleCanvas
+            variant="ambient"
+            theme={theme}
+            style={{
+              position:      'absolute',
+              inset:         0,
+              pointerEvents: 'none',
+            }}
+          />
+        </div>
       )}
 
       {/* App content */}
