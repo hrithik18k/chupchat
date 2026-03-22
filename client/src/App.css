@@ -13,6 +13,13 @@
 
   --font-heading: 'Syne', sans-serif;
   --font-body: 'DM Sans', sans-serif;
+
+  /* Animation tokens */
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Smooth theme transitions */
+  transition: background-color 0.4s ease, color 0.3s ease;
 }
 
 [data-theme="light"] {
@@ -40,12 +47,17 @@
   cursor: pointer;
   z-index: 999;
   font-size: 1.2rem;
-  transition: all 0.2s;
+  transition: all 0.3s var(--ease-out-expo);
 }
 
 .theme-toggle-btn:hover {
-  transform: scale(1.05);
+  transform: scale(1.1);
   background: var(--bg-surface);
+  box-shadow: 0 0 12px rgba(91, 95, 255, 0.3);
+}
+
+.theme-toggle-btn.spin {
+  animation: themeFlip 0.5s var(--spring) forwards;
 }
 
 * {
@@ -177,18 +189,50 @@ h6 {
 .login-form-wrapper {
   width: 100%;
   max-width: 400px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: 20px;
+  padding: 2.5rem;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(91, 95, 255, 0.05);
+  position: relative;
+  overflow: hidden;
+  animation: loginCardIn 0.5s var(--ease-out-expo) both;
+}
+
+.login-form-wrapper::before {
+  content: '';
+  position: absolute;
+  top: -1px; left: -1px; right: -1px; bottom: -1px;
+  border-radius: 21px;
+  background: linear-gradient(135deg, rgba(91, 95, 255, 0.3), transparent 50%, rgba(167, 139, 250, 0.15));
+  pointer-events: none;
+  animation: loginBorderPulse 4s ease-in-out infinite;
+  z-index: 0;
+  opacity: 0.5;
 }
 
 .login-form-wrapper h1 {
   font-size: 2.5rem;
   margin-bottom: 0.5rem;
   font-weight: 700;
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(90deg, var(--text-primary) 0%, var(--text-primary) 40%, rgba(91,95,255,0.9) 50%, var(--text-primary) 60%, var(--text-primary) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmerText 5s linear infinite;
 }
 
 .login-form-wrapper p {
   color: var(--text-secondary);
   font-size: 1.1rem;
   margin-bottom: 2.5rem;
+  position: relative;
+  z-index: 1;
 }
 
 .divider {
@@ -235,6 +279,16 @@ h6 {
   max-width: 420px;
   padding: 2.5rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .room-card {
+    animation: roomCardFloat 3s ease-in-out infinite alternate, roomCardEntrance 0.5s var(--ease-out-expo) both;
+  }
 }
 
 .room-card h2 {
@@ -307,7 +361,7 @@ h6 {
   border-right: 1px solid var(--border-light);
   display: flex;
   flex-direction: column;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.4s var(--spring);
   z-index: 50;
   position: absolute;
   top: 0;
@@ -446,6 +500,7 @@ h6 {
   background: rgba(91, 95, 255, 0.12);
   color: var(--accent-primary);
   border: 1px solid rgba(91, 95, 255, 0.2);
+  animation: badgeGlowNormal 3s ease-in-out infinite;
 }
 
 .room-badge-ghost {
@@ -458,6 +513,7 @@ h6 {
   background: rgba(236, 72, 153, 0.12);
   color: #ec4899;
   border: 1px solid rgba(236, 72, 153, 0.2);
+  animation: badgeGlowCouples 3s ease-in-out infinite;
 }
 
 .room-badge-desc {
@@ -570,7 +626,16 @@ h6 {
   display: flex;
   flex-direction: column;
   max-width: 85%;
-  animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .message-wrapper.received {
+    animation: msgSlideLeft 0.4s var(--spring) both;
+  }
+
+  .message-wrapper.sent {
+    animation: msgSlideRight 0.4s var(--spring) both;
+  }
 }
 
 .message-wrapper.received {
@@ -602,12 +667,23 @@ h6 {
   background-color: var(--bg-surface);
   border-bottom-left-radius: 4px;
   border: 1px solid var(--border-light);
+  transition: transform 0.2s var(--ease-out-expo), box-shadow 0.2s ease;
 }
 
 .sent .message-bubble {
   background-color: var(--accent-primary);
   color: white;
   border-bottom-right-radius: 4px;
+  box-shadow: 0 2px 12px rgba(91, 95, 255, 0.2);
+  transition: transform 0.2s var(--ease-out-expo), box-shadow 0.2s ease;
+}
+
+.message-bubble:hover {
+  transform: translateY(-1px);
+}
+
+.sent .message-bubble:hover {
+  box-shadow: 0 4px 20px rgba(91, 95, 255, 0.35);
 }
 
 .message-footer {
@@ -649,31 +725,30 @@ h6 {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background-color: var(--text-secondary);
-  animation: bounce 1.4s infinite ease-in-out both;
+  background-color: var(--accent-primary);
+  animation: dotWave 1.4s infinite ease-in-out both;
 }
 
-.dot:nth-child(1) {
-  animation-delay: -0.32s;
-}
+.dot:nth-child(1) { animation-delay: -0.32s; }
+.dot:nth-child(2) { animation-delay: -0.16s; }
+.dot:nth-child(3) { animation-delay: 0s; }
 
-.dot:nth-child(2) {
-  animation-delay: -0.16s;
+@keyframes dotWave {
+  0%, 80%, 100% {
+    transform: scale(0.6) translateY(0);
+    opacity: 0.4;
+    box-shadow: none;
+  }
+  40% {
+    transform: scale(1) translateY(-3px);
+    opacity: 1;
+    box-shadow: 0 0 6px var(--accent-primary);
+  }
 }
 
 @keyframes bounce {
-
-  0%,
-  80%,
-  100% {
-    transform: scale(0.6);
-    opacity: 0.4;
-  }
-
-  40% {
-    transform: scale(1);
-    opacity: 1;
-  }
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
 }
 
 /* System Message */
@@ -688,6 +763,7 @@ h6 {
   text-align: center;
   max-width: 90%;
   border: 1px solid var(--border-light);
+  animation: systemMsgExpand 0.35s var(--ease-out-expo) both;
 }
 
 /* BOTTOM INPUT AREA */
@@ -704,17 +780,25 @@ h6 {
 .input-pill {
   flex: 1;
   background-color: var(--bg-base);
-  border: 1px solid var(--border-light);
+  border: 1.5px solid var(--border-light);
   border-radius: 24px;
   display: flex;
   align-items: center;
   padding: 0.25rem 0.5rem;
   min-height: 44px;
-  transition: border-color 0.2s;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
 }
 
 .input-pill:focus-within {
   border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(91, 95, 255, 0.15), 0 2px 12px rgba(91, 95, 255, 0.1);
+  transform: scale(1.005);
+}
+
+.input-pill.cipher-mode {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2), 0 2px 16px rgba(124, 58, 237, 0.15);
+  background: linear-gradient(135deg, rgba(124,58,237,0.05) 0%, var(--bg-base) 100%);
 }
 
 .emoji-btn {
@@ -726,11 +810,12 @@ h6 {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.2s;
+  transition: color 0.2s, transform 0.4s var(--spring);
 }
 
 .emoji-btn:hover {
   color: var(--text-primary);
+  transform: rotate(360deg);
 }
 
 .chat-input {
@@ -762,14 +847,14 @@ h6 {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
   flex-shrink: 0;
   margin-bottom: 2px;
 }
 
 .send-btn:hover:not(:disabled) {
   background-color: var(--accent-hover);
-  transform: scale(1.05);
+  box-shadow: 0 0 16px rgba(91, 95, 255, 0.5);
 }
 
 .send-btn:disabled {
@@ -778,8 +863,8 @@ h6 {
   cursor: not-allowed;
 }
 
-.send-btn:active:not(:disabled) {
-  transform: scale(0.95);
+.send-btn.pop {
+  animation: sendPop 0.35s var(--spring) both;
 }
 
 /* Markdown Specifics inside Messages */
@@ -1250,12 +1335,14 @@ a:hover {
   padding: 0.75rem 1rem;
   border-radius: 8px;
   font-weight: 600;
-  transition: all 0.2s;
+  transition: all 0.25s ease;
 }
 
 .btn-delete-room:hover {
-  background-color: #ef4444;
-  color: white;
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.35);
+  transform: translateY(-1px);
 }
 
 .btn-request-delete {
@@ -1385,4 +1472,1053 @@ a:hover {
     opacity: 1;
     transform: translate(-50%, 0);
   }
+}
+
+/* =====================================================
+   ONYX ANIMATION SYSTEM — ALL NEW KEYFRAMES
+   ===================================================== */
+
+/* --- Message bubble spring entrances --- */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes msgSlideRight {
+    from {
+      opacity: 0;
+      transform: translateX(24px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+    }
+  }
+
+  @keyframes msgSlideLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-24px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+    }
+  }
+
+  /* --- Room card float + entrance --- */
+  @keyframes roomCardFloat {
+    from { transform: translateY(0px); }
+    to   { transform: translateY(-6px); }
+  }
+
+  @keyframes roomCardEntrance {
+    from { opacity: 0; transform: translateY(20px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)     scale(1); }
+  }
+
+  /* --- Login card entrance --- */
+  @keyframes loginCardIn {
+    from { opacity: 0; transform: translateY(16px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0)    scale(1); }
+  }
+
+  /* --- Login border accent pulse --- */
+  @keyframes loginBorderPulse {
+    0%, 100% { opacity: 0.4; }
+    50%       { opacity: 0.75; }
+  }
+
+  /* --- Heading shimmer glint --- */
+  @keyframes shimmerText {
+    0%   { background-position: 200% center; }
+    100% { background-position: -200% center; }
+  }
+
+  /* --- Theme toggle flip --- */
+  @keyframes themeFlip {
+    0%   { transform: rotate(0deg)   scale(1); }
+    50%  { transform: rotate(180deg) scale(1.15); }
+    100% { transform: rotate(360deg) scale(1); }
+  }
+
+  /* --- Send button pop --- */
+  @keyframes sendPop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(0.82); }
+    70%  { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+
+  /* --- System message center expand --- */
+  @keyframes systemMsgExpand {
+    from { opacity: 0; transform: scale(0.8); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  /* --- Error shake horizontal --- */
+  @keyframes shakeX {
+    0%, 100% { transform: translateX(0); }
+    20%       { transform: translateX(-8px); }
+    40%       { transform: translateX(8px); }
+    60%       { transform: translateX(-5px); }
+    80%       { transform: translateX(5px); }
+  }
+
+  /* --- Button ripple on :active --- */
+  @keyframes ripple {
+    0%   { transform: scale(0); opacity: 0.5; }
+    100% { transform: scale(4); opacity: 0; }
+  }
+
+  /* --- Toast bounce-in from top --- */
+  @keyframes toastBounceIn {
+    0%   { opacity: 0; transform: translate(-50%, -40px) scale(0.9); }
+    65%  { transform: translate(-50%, 4px)   scale(1.04); }
+    100% { opacity: 1; transform: translate(-50%, 0)     scale(1); }
+  }
+
+  /* --- Toast fade-out with scale-down --- */
+  @keyframes toastFadeOut {
+    from { opacity: 1; transform: translate(-50%, 0)    scale(1); }
+    to   { opacity: 0; transform: translate(-50%, -10px) scale(0.95); }
+  }
+
+  /* --- Cipher avatar continuous gradient rotation --- */
+  @keyframes cipherAvatarSpin {
+    0%   { filter: hue-rotate(0deg); }
+    100% { filter: hue-rotate(360deg); }
+  }
+
+  /* --- User item stagger (applied via JS inline delay) --- */
+  @keyframes userSlideIn {
+    from { opacity: 0; transform: translateX(-12px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* --- Online pulse ring --- */
+  @keyframes onlinePulse {
+    0%   { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.6); }
+    70%  { box-shadow: 0 0 0 6px rgba(74, 222, 128, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+  }
+
+  /* --- Badge glow pulses --- */
+  @keyframes badgeGlowNormal {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(91, 95, 255, 0); }
+    50%       { box-shadow: 0 0 8px 2px rgba(91, 95, 255, 0.2); }
+  }
+
+  @keyframes badgeGlowCouples {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
+    50%       { box-shadow: 0 0 8px 2px rgba(236, 72, 153, 0.2); }
+  }
+
+  /* --- Tab indicator slide --- */
+  @keyframes tabSlideIn {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
+}
+
+/* =====================================================
+   UTILITY CLASSES
+   ===================================================== */
+
+/* Error message shake */
+.error-msg {
+  color: var(--danger);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.error-msg.shake {
+  animation: shakeX 0.4s ease both;
+}
+
+/* Stagger animation for user list items */
+.user-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  animation: userSlideIn 0.35s var(--ease-out-expo) both;
+}
+
+/* Online avatar pulse ring */
+.user-avatar.online {
+  box-shadow: 0 0 0 2px #4ade80;
+  animation: onlinePulse 2s ease-in-out infinite;
+}
+
+/* Cipher avatar spin */
+.cipher-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #7c3aed 0%, #5B5FFF 50%, #a78bfa 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+  animation: cipherAvatarSpin 4s linear infinite;
+}
+
+/* Ghost toast — bounce in */
+.ghost-toast {
+  animation: toastBounceIn 0.45s var(--ease-out-expo) both !important;
+}
+
+/* Room-deleted toast — bounce + red glow progress */
+.room-deleted-toast {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ef4444;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 30px;
+  z-index: 100;
+  font-weight: 600;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.55);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: toastBounceIn 0.45s var(--ease-out-expo) both;
+  overflow: hidden;
+}
+
+/* Toast progress drain bar */
+.room-deleted-toast::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.5);
+  animation: toastDrain 2.5s linear forwards;
+  transform-origin: left;
+}
+
+@keyframes toastDrain {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+/* Delete request notification shake entrance */
+.delete-request-notification {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  padding: 16px;
+  border-radius: 12px;
+  z-index: 90;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  animation: toastBounceIn 0.45s var(--ease-out-expo) both, shakeX 0.5s 0.5s ease both;
+}
+
+/* Ambient particle canvas in chat */
+.ambient-canvas-wrapper {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.2;
+}
+
+/* Typing avatar breathing ring */
+.typing-avatar-ring {
+  animation: onlinePulse 1.5s ease-in-out infinite;
+}
+
+/* Character counter fade-in */
+.char-counter {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  padding: 0 0.5rem;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  white-space: nowrap;
+}
+
+.char-counter.visible {
+  opacity: 1;
+}
+
+.char-counter.warn {
+  color: var(--danger);
+}
+
+/* Send btn ripple pseudo-element */
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(0);
+  opacity: 0;
+  pointer-events: none;
+  transition: none;
+}
+
+.btn:active::after {
+  animation: ripple 0.45s ease-out forwards;
+}
+
+/* Google / Guest buttons micro-hover */
+.btn-google:hover:not(:disabled),
+.btn-outline:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.btn-google:hover:not(:disabled) {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+
+.btn-outline:hover:not(:disabled) {
+  box-shadow: 0 4px 14px rgba(91, 95, 255, 0.15);
+}
+
+/* Tab button active indicator slide */
+.tab-btn {
+  position: relative;
+}
+
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent-primary);
+  animation: tabSlideIn 0.25s var(--ease-out-expo) both;
+}
+
+/* Icon button micro-interactions */
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.2s, transform 0.25s var(--ease-out-expo);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn:hover {
+  color: var(--text-primary);
+  transform: scale(1.15);
+}
+
+/* Copy button success state */
+.icon-btn.copied {
+  color: #4ade80;
+  animation: sendPop 0.35s var(--spring) both;
+}
+
+/* Hamburger hover rotate */
+.hamburger-btn:hover {
+  opacity: 0.7;
+  transform: scale(1.08);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+/* =====================================================
+   SCROLLBAR STYLING — Chat messages area
+   ===================================================== */
+
+.chat-messages::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background-color: rgba(91, 95, 255, 0.4);
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(91, 95, 255, 0.65);
+}
+
+.sidebar-content::-webkit-scrollbar {
+  width: 3px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+  background-color: rgba(91, 95, 255, 0.25);
+  border-radius: 3px;
+}
+
+/* =====================================================
+   LIGHT THEME OVERRIDES
+   ===================================================== */
+
+[data-theme="light"] .login-form-wrapper::before {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), transparent 50%, rgba(167, 139, 250, 0.1));
+}
+
+[data-theme="light"] .login-form-wrapper h1 {
+  background: linear-gradient(90deg, var(--text-primary) 0%, var(--text-primary) 40%, rgba(79,70,229,0.85) 50%, var(--text-primary) 60%, var(--text-primary) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+[data-theme="light"] .chat-messages::-webkit-scrollbar-thumb {
+  background-color: rgba(79, 70, 229, 0.35);
+}
+
+[data-theme="light"] .chat-messages::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(79, 70, 229, 0.6);
+}
+
+[data-theme="light"] .dot {
+  background-color: var(--accent-primary);
+}
+
+/* =====================================================
+   REDUCED MOTION — all non-essential animations off
+   ===================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ============================================================
+   ROOM SELECTION — ANIMATED SECURITY BACKGROUND (rsbg)
+   ============================================================ */
+
+/*  Fullscreen backdrop container  */
+.rsbg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* ── Dot-grid overlay ── */
+.rsbg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, rgba(91, 95, 255, 0.18) 1px, transparent 1px);
+  background-size: 36px 36px;
+  animation: rsbgGridDrift 20s linear infinite;
+  opacity: 0.6;
+}
+
+@keyframes rsbgGridDrift {
+  0%   { background-position: 0 0; }
+  100% { background-position: 36px 36px; }
+}
+
+/* ── Radar / sonar concentric rings ── */
+.rsbg-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(91, 95, 255, 0.22);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  animation: rsbgRingPulse 6s ease-out infinite;
+  /* GPU layer */
+  will-change: transform, opacity;
+}
+
+.rsbg-ring-1 { width: 200px; height: 200px; animation-delay: 0s; }
+.rsbg-ring-2 { width: 380px; height: 380px; animation-delay: 1.5s; }
+.rsbg-ring-3 { width: 580px; height: 580px; animation-delay: 3s;   }
+.rsbg-ring-4 { width: 800px; height: 800px; animation-delay: 4.5s; }
+
+@keyframes rsbgRingPulse {
+  0%   { transform: translate(-50%, -50%) scale(0.2); opacity: 0.7; }
+  60%  { opacity: 0.15; }
+  100% { transform: translate(-50%, -50%) scale(1);   opacity: 0; }
+}
+
+/* ── Center glowing dot ── */
+.rsbg-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 0 rgba(91, 95, 255, 0.6);
+  animation: rsbgCenterPulse 2.5s ease-in-out infinite;
+  will-change: box-shadow;
+}
+
+@keyframes rsbgCenterPulse {
+  0%   { box-shadow: 0 0 0 0   rgba(91, 95, 255, 0.6); }
+  50%  { box-shadow: 0 0 0 16px rgba(91, 95, 255, 0); }
+  100% { box-shadow: 0 0 0 0   rgba(91, 95, 255, 0); }
+}
+
+/* ── Rotating radar sweep beam ── */
+.rsbg-sweep {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 440px;
+  height: 440px;
+  transform-origin: center center;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 320deg,
+    rgba(91, 95, 255, 0.12) 340deg,
+    rgba(91, 95, 255, 0.28) 355deg,
+    rgba(91, 95, 255, 0.04) 360deg
+  );
+  animation: rsbgSweep 5s linear infinite;
+  will-change: transform;
+}
+
+@keyframes rsbgSweep {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* ── Horizontal scan line ── */
+.rsbg-scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(91, 95, 255, 0.15) 20%,
+    rgba(91, 95, 255, 0.5) 50%,
+    rgba(91, 95, 255, 0.15) 80%,
+    transparent 100%
+  );
+  animation: rsbgScan 8s ease-in-out infinite;
+  will-change: transform, opacity;
+  opacity: 0;
+}
+
+@keyframes rsbgScan {
+  0%   { transform: translateY(-20px);   opacity: 0; }
+  5%   { opacity: 1; }
+  50%  { opacity: 0.7; }
+  95%  { opacity: 1; }
+  100% { transform: translateY(100vh);   opacity: 0; }
+}
+
+/* ── Corner node markers ── */
+.rsbg-node {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(91, 95, 255, 0.4);
+  animation: rsbgNodeBlink 3s ease-in-out infinite;
+}
+
+/* L-shaped corners via pseudo-elements */
+.rsbg-node::before,
+.rsbg-node::after {
+  content: '';
+  position: absolute;
+  background: rgba(91, 95, 255, 0.4);
+}
+
+.rsbg-node-tl { top: 32px; left: 32px;  border-right: none; border-bottom: none; }
+.rsbg-node-tr { top: 32px; right: 32px; border-left: none;  border-bottom: none; }
+.rsbg-node-bl { bottom: 32px; left: 32px;  border-right: none; border-top: none; }
+.rsbg-node-br { bottom: 32px; right: 32px; border-left: none;  border-top: none; }
+
+.rsbg-node-tl { animation-delay: 0s; }
+.rsbg-node-tr { animation-delay: 0.75s; }
+.rsbg-node-bl { animation-delay: 1.5s; }
+.rsbg-node-br { animation-delay: 2.25s; }
+
+@keyframes rsbgNodeBlink {
+  0%, 100% { opacity: 0.35; border-color: rgba(91, 95, 255, 0.4); }
+  50%       { opacity: 1;    border-color: rgba(91, 95, 255, 0.9);
+              filter: drop-shadow(0 0 4px rgba(91, 95, 255, 0.7)); }
+}
+
+/* ── Floating encrypted glyphs ── */
+.rsbg-glyph {
+  position: absolute;
+  font-family: var(--font-heading);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(91, 95, 255, 0.35);
+  pointer-events: none;
+  animation: rsbgGlyphFloat linear infinite;
+  will-change: transform, opacity;
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* Scatter each glyph to a different screen position */
+.rsbg-glyph-1 { top: 12%;  left: 8%;   animation-duration: 14s; animation-delay: 0s;   }
+.rsbg-glyph-2 { top: 25%;  right: 10%; animation-duration: 18s; animation-delay: 2s;   }
+.rsbg-glyph-3 { top: 70%;  left: 6%;   animation-duration: 16s; animation-delay: 4s;   }
+.rsbg-glyph-4 { top: 80%;  right: 8%;  animation-duration: 12s; animation-delay: 1s;   }
+.rsbg-glyph-5 { top: 15%;  right: 20%; animation-duration: 20s; animation-delay: 6s;   }
+.rsbg-glyph-6 { top: 55%;  left: 5%;   animation-duration: 15s; animation-delay: 3s;   }
+.rsbg-glyph-7 { top: 40%;  right: 5%;  animation-duration: 17s; animation-delay: 8s;   }
+.rsbg-glyph-8 { top: 88%;  left: 22%;  animation-duration: 13s; animation-delay: 5s;   }
+
+@keyframes rsbgGlyphFloat {
+  0%   { transform: translateY(0)   rotate(-3deg); opacity: 0;    }
+  10%  { opacity: 0.55; }
+  50%  { transform: translateY(-22px) rotate(3deg);  opacity: 0.35; }
+  90%  { opacity: 0.5; }
+  100% { transform: translateY(0)   rotate(-3deg); opacity: 0;    }
+}
+
+/* ── Light theme variants ── */
+[data-theme="light"] .rsbg-grid {
+  background-image:
+    radial-gradient(circle, rgba(79, 70, 229, 0.12) 1px, transparent 1px);
+}
+
+[data-theme="light"] .rsbg-ring {
+  border-color: rgba(79, 70, 229, 0.15);
+}
+
+[data-theme="light"] .rsbg-center {
+  background: var(--accent-primary);
+  box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.5);
+}
+
+[data-theme="light"] .rsbg-sweep {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 320deg,
+    rgba(79, 70, 229, 0.06) 340deg,
+    rgba(79, 70, 229, 0.14) 355deg,
+    rgba(79, 70, 229, 0.02) 360deg
+  );
+}
+
+[data-theme="light"] .rsbg-scanline {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(79, 70, 229, 0.08) 20%,
+    rgba(79, 70, 229, 0.3) 50%,
+    rgba(79, 70, 229, 0.08) 80%,
+    transparent 100%
+  );
+}
+
+[data-theme="light"] .rsbg-node {
+  border-color: rgba(79, 70, 229, 0.3);
+}
+
+[data-theme="light"] .rsbg-glyph {
+  color: rgba(79, 70, 229, 0.25);
+}
+
+/* ── Reduced motion — kill all rsbg animations ── */
+@media (prefers-reduced-motion: reduce) {
+  .rsbg { display: none; }
+  .room-card-border-spin { display: none; }
+}
+
+/* =============================================================
+   RSBG — ADDITIONAL LAYERS
+   ============================================================= */
+
+/* 5th (largest) ring */
+.rsbg-ring-5 { width: 1050px; height: 1050px; animation-delay: 2.25s; }
+
+/* Counter-rotating secondary sweep — smaller radius, opposite spin */
+.rsbg-sweep-2 {
+  width: 260px;
+  height: 260px;
+  background: conic-gradient(
+    from 180deg,
+    transparent 0deg,
+    transparent 330deg,
+    rgba(167, 139, 250, 0.1) 348deg,
+    rgba(167, 139, 250, 0.22) 358deg,
+    rgba(167, 139, 250, 0.03) 360deg
+  );
+  animation: rsbgSweepReverse 8s linear infinite;
+}
+
+@keyframes rsbgSweepReverse {
+  from { transform: translate(-50%, -50%) rotate(360deg); }
+  to   { transform: translate(-50%, -50%) rotate(0deg); }
+}
+
+/* Second offset scan line */
+.rsbg-scanline-2 {
+  animation-delay: 4s;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(167, 139, 250, 0.1) 20%,
+    rgba(167, 139, 250, 0.35) 50%,
+    rgba(167, 139, 250, 0.1) 80%,
+    transparent 100%
+  );
+}
+
+/* ── Orbiting satellite dots ── */
+.rsbg-orbit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.rsbg-orbit-dot {
+  position: absolute;
+  border-radius: 50%;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.rsbg-orbit-dot-1 {
+  width: 6px; height: 6px;
+  background: #5B5FFF;
+  box-shadow: 0 0 8px rgba(91, 95, 255, 0.8);
+  animation: rsbgOrbit1 7s linear infinite;
+}
+.rsbg-orbit-dot-2 {
+  width: 5px; height: 5px;
+  background: #a78bfa;
+  box-shadow: 0 0 6px rgba(167, 139, 250, 0.8);
+  animation: rsbgOrbit2 11s linear infinite;
+}
+.rsbg-orbit-dot-3 {
+  width: 4px; height: 4px;
+  background: #60a5fa;
+  box-shadow: 0 0 6px rgba(96, 165, 250, 0.8);
+  animation: rsbgOrbit3 9s linear infinite reverse;
+}
+.rsbg-orbit-dot-4 {
+  width: 5px; height: 5px;
+  background: #facc15;
+  box-shadow: 0 0 6px rgba(250, 204, 21, 0.7);
+  animation: rsbgOrbit4 14s linear infinite;
+}
+
+@keyframes rsbgOrbit1 {
+  from { transform: rotate(0deg)   translateX(120px) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(120px) rotate(-360deg); }
+}
+@keyframes rsbgOrbit2 {
+  from { transform: rotate(45deg)  translateX(190px) rotate(-45deg); }
+  to   { transform: rotate(405deg) translateX(190px) rotate(-405deg); }
+}
+@keyframes rsbgOrbit3 {
+  from { transform: rotate(200deg) translateX(155px) rotate(-200deg); }
+  to   { transform: rotate(560deg) translateX(155px) rotate(-560deg); }
+}
+@keyframes rsbgOrbit4 {
+  from { transform: rotate(280deg) translateX(230px) rotate(-280deg); }
+  to   { transform: rotate(640deg) translateX(230px) rotate(-640deg); }
+}
+
+/* ── Matrix binary rain columns ── */
+.rsbg-rain {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: rgba(91, 95, 255, 0.5);
+  letter-spacing: 0.05em;
+  user-select: none;
+  pointer-events: none;
+}
+
+.rsbg-rain-1  { left: 4%;   top: -20%; animation: rsbgRainFall 12s linear infinite 0s; }
+.rsbg-rain-2  { left: 10%;  top: -20%; animation: rsbgRainFall 16s linear infinite 2s; }
+.rsbg-rain-3  { right: 6%;  top: -20%; animation: rsbgRainFall 14s linear infinite 4s; }
+.rsbg-rain-4  { right: 14%; top: -20%; animation: rsbgRainFall 18s linear infinite 1s; }
+.rsbg-rain-5  { left: 18%;  top: -20%; animation: rsbgRainFall 15s linear infinite 6s; }
+.rsbg-rain-6  { right: 22%; top: -20%; animation: rsbgRainFall 13s linear infinite 3s; }
+.rsbg-rain-7  { left: 28%;  top: -20%; animation: rsbgRainFall 17s linear infinite 8s; }
+
+@keyframes rsbgRainFall {
+  0%   { transform: translateY(-60px);  opacity: 0; }
+  5%   { opacity: 0.7; }
+  85%  { opacity: 0.4; }
+  100% { transform: translateY(110vh);  opacity: 0; }
+}
+
+/* Each character within a column flickers independently */
+.rsbg-rain-char { display: block; }
+.rsbg-rain-char-1 { animation: rsbgCharFlick 2.1s ease-in-out infinite 0s; }
+.rsbg-rain-char-2 { animation: rsbgCharFlick 1.8s ease-in-out infinite 0.3s; }
+.rsbg-rain-char-3 { animation: rsbgCharFlick 2.4s ease-in-out infinite 0.6s; }
+.rsbg-rain-char-4 { animation: rsbgCharFlick 1.6s ease-in-out infinite 0.9s; }
+.rsbg-rain-char-5 { animation: rsbgCharFlick 2.0s ease-in-out infinite 1.2s; }
+.rsbg-rain-char-6 { animation: rsbgCharFlick 1.9s ease-in-out infinite 1.5s; }
+.rsbg-rain-char-7 { animation: rsbgCharFlick 2.3s ease-in-out infinite 1.8s; }
+.rsbg-rain-char-8 { animation: rsbgCharFlick 1.7s ease-in-out infinite 2.1s; }
+
+@keyframes rsbgCharFlick {
+  0%, 100% { opacity: 0.3; color: rgba(91, 95, 255, 0.5); }
+  40%       { opacity: 1;   color: rgba(167, 139, 250, 0.9);
+              text-shadow: 0 0 6px rgba(167, 139, 250, 0.8); }
+  70%       { opacity: 0.5; color: rgba(91, 95, 255, 0.6); }
+}
+
+/* ── Floating hexagon outlines ── */
+.rsbg-hex {
+  position: absolute;
+  pointer-events: none;
+  will-change: transform, opacity;
+  /* Hexagon via clip-path */
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background: transparent;
+  outline: 1px solid rgba(91, 95, 255, 0.25);
+}
+
+/* Use border trick instead of clip-path outline */
+.rsbg-hex {
+  clip-path: none;
+  border-radius: 0;
+  width: 40px;
+  height: 46px;
+  border: 1px solid rgba(91, 95, 255, 0.2);
+  border-radius: 4px;
+  transform: rotate(30deg);
+  background: rgba(91, 95, 255, 0.03);
+}
+
+.rsbg-hex-1 { top: 10%;  left: 3%;   width: 44px; height: 50px; animation: rsbgHexDrift 18s ease-in-out infinite 0s;   }
+.rsbg-hex-2 { top: 70%;  right: 4%;  width: 36px; height: 42px; animation: rsbgHexDrift 22s ease-in-out infinite 4s;   }
+.rsbg-hex-3 { top: 35%;  left: 2%;   width: 28px; height: 32px; animation: rsbgHexDrift 14s ease-in-out infinite 8s;   }
+.rsbg-hex-4 { top: 20%;  right: 3%;  width: 52px; height: 60px; animation: rsbgHexDrift 26s ease-in-out infinite 12s;  }
+
+@keyframes rsbgHexDrift {
+  0%, 100% { transform: rotate(30deg)  translateY(0);    opacity: 0.35; }
+  25%       { transform: rotate(45deg)  translateY(-18px); opacity: 0.6; }
+  50%       { transform: rotate(30deg)  translateY(-8px);  opacity: 0.25; }
+  75%       { transform: rotate(15deg)  translateY(-20px); opacity: 0.55; }
+}
+
+/* ── Data-packet flow lines ── */
+.rsbg-dataline {
+  position: absolute;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(91, 95, 255, 0.4), transparent);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.rsbg-dataline-1 { top: 30%; left: 0; right: 0; }
+.rsbg-dataline-2 { top: 55%; left: 0; right: 0; animation-delay: 3s; }
+.rsbg-dataline-3 { top: 75%; left: 0; right: 0; animation-delay: 6s; }
+
+.rsbg-packet {
+  position: absolute;
+  height: 100%;
+  width: 80px;
+  background: linear-gradient(90deg, transparent, rgba(91, 95, 255, 0.9), rgba(167, 139, 250, 0.6), transparent);
+  animation: rsbgPacket 4s ease-in-out infinite;
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(91, 95, 255, 0.5);
+  will-change: transform;
+}
+
+.rsbg-dataline-2 .rsbg-packet { animation-delay: 1.5s; animation-duration: 5s; }
+.rsbg-dataline-3 .rsbg-packet { animation-delay: 3s;   animation-duration: 3.5s; }
+
+@keyframes rsbgPacket {
+  0%   { transform: translateX(-100px); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateX(calc(100vw + 100px)); opacity: 0; }
+}
+
+/* =============================================================
+   ROOM CARD — ANIMATED ENHANCED VERSION
+   ============================================================= */
+
+.room-card-animated {
+  position: relative;
+  isolation: isolate;
+  background: var(--bg-surface) !important;
+}
+
+/* Spinning gradient border layer */
+.room-card-border-spin {
+  position: absolute;
+  inset: -2px;
+  border-radius: 18px;
+  z-index: -1;
+  background: conic-gradient(
+    from var(--spin-angle, 0deg),
+    #5B5FFF 0deg,
+    #a78bfa 60deg,
+    #60a5fa 120deg,
+    #facc15 180deg,
+    #ef4444 240deg,
+    #a78bfa 300deg,
+    #5B5FFF 360deg
+  );
+  animation: roomBorderSpin 6s linear infinite;
+  opacity: 0.55;
+  filter: blur(1px);
+}
+
+/* Inner mask to show only the border edge */
+.room-card-border-spin::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 15px;
+  background: var(--bg-surface);
+}
+
+@property --spin-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes roomBorderSpin {
+  to { --spin-angle: 360deg; }
+}
+
+/* Fallback for browsers without @property */
+@supports not (background: conic-gradient(from 1deg, red, blue)) {
+  .room-card-border-spin {
+    background: linear-gradient(135deg, #5B5FFF, #a78bfa, #60a5fa, #5B5FFF);
+    background-size: 300% 300%;
+    animation: roomBorderFallback 4s linear infinite;
+  }
+  @keyframes roomBorderFallback {
+    0%   { background-position: 0%   50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0%   50%; }
+  }
+}
+
+/* Logo pulse glow */
+.room-card-logo {
+  display: block;
+  margin: 0 auto;
+  animation: roomLogoGlow 3s ease-in-out infinite;
+  will-change: filter;
+}
+
+@keyframes roomLogoGlow {
+  0%, 100% { filter: drop-shadow(0 0 0px rgba(91, 95, 255, 0)); }
+  50%       { filter: drop-shadow(0 0 14px rgba(91, 95, 255, 0.65))
+                      drop-shadow(0 0 28px rgba(167, 139, 250, 0.3)); }
+}
+
+/* "Secure Rooms" heading shimmer */
+.room-card-title {
+  background: linear-gradient(
+    90deg,
+    var(--text-primary) 0%,
+    var(--text-primary) 35%,
+    rgba(91, 95, 255, 0.95) 50%,
+    rgba(167, 139, 250, 0.9) 55%,
+    var(--text-primary) 65%,
+    var(--text-primary) 100%
+  );
+  background-size: 250% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: roomTitleShimmer 3.5s linear infinite;
+}
+
+@keyframes roomTitleShimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+/* Light mode room card overrides */
+[data-theme="light"] .room-card-border-spin {
+  opacity: 0.35;
+}
+
+[data-theme="light"] .room-card-title {
+  background: linear-gradient(
+    90deg,
+    var(--text-primary) 0%,
+    var(--text-primary) 35%,
+    rgba(79, 70, 229, 0.9) 50%,
+    rgba(99, 102, 241, 0.85) 55%,
+    var(--text-primary) 65%,
+    var(--text-primary) 100%
+  );
+  background-size: 250% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Light mode rain + hex */
+[data-theme="light"] .rsbg-rain,
+[data-theme="light"] .rsbg-rain-char { color: rgba(79, 70, 229, 0.4); }
+
+[data-theme="light"] .rsbg-hex {
+  border-color: rgba(79, 70, 229, 0.18);
+  background: rgba(79, 70, 229, 0.02);
+}
+
+[data-theme="light"] .rsbg-dataline {
+  background: linear-gradient(90deg, transparent, rgba(79, 70, 229, 0.3), transparent);
+}
+
+[data-theme="light"] .rsbg-packet {
+  background: linear-gradient(90deg, transparent, rgba(79, 70, 229, 0.8), rgba(99, 102, 241, 0.5), transparent);
+}
+
+[data-theme="light"] .rsbg-sweep-2 {
+  background: conic-gradient(
+    from 180deg,
+    transparent 0deg,
+    transparent 330deg,
+    rgba(99, 102, 241, 0.06) 348deg,
+    rgba(99, 102, 241, 0.15) 358deg,
+    rgba(99, 102, 241, 0.02) 360deg
+  );
 }
