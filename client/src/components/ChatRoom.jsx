@@ -937,9 +937,9 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                             </svg>
                         </button>
                         <div className="chat-title">
-                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <img src="/onyx-logo.png" alt="Onyx Logo" width="24" height="24" style={{ borderRadius: '6px' }} />
-                                Onyx
+                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                                <img src="/onyx-logo.png" alt="Onyx Logo" width="24" height="24" style={{ borderRadius: '6px', flexShrink: 0 }} />
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>Onyx</span>
                                 {currentRoomType === 'ghost' && (
                                     <span style={{ background: '#4b5563', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold' }}>👻 Ghost</span>
                                 )}
@@ -950,7 +950,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                             <span>Fully Encrypted</span>
                         </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                         {currentRoomType === 'couples' && (
                             <button
                                 onClick={() => setCouplesTheme(!couplesTheme)}
