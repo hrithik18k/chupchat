@@ -44,6 +44,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
     const [deleteRequestPending, setDeleteRequestPending] = useState(false)
     const [incomingDeleteRequest, setIncomingDeleteRequest] = useState(null) // { requesterName }
     const [showRoomDeletedToast, setShowRoomDeletedToast] = useState('')
+    const [couplesTheme, setCouplesTheme] = useState(false)
     const [recentRooms, setRecentRooms] = useState(() => {
         const saved = localStorage.getItem(`onyx-recent-rooms-${user?.name || 'guest'}`);
         return saved ? JSON.parse(saved) : [];
@@ -780,7 +781,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
     }
 
     return (
-        <div className="app-layout">
+        <div className={`app-layout ${currentRoomType === 'couples' && couplesTheme ? 'theme-couples' : ''}`}>
             <div className={`sidebar-overlay ${mobileSidebarOpen ? 'mobile-open' : ''}`} onClick={() => setMobileSidebarOpen(false)}></div>
             <div className={`sidebar ${mobileSidebarOpen ? 'mobile-open' : ''}`}>
                 <div className="sidebar-header">
@@ -950,6 +951,17 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                         </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {currentRoomType === 'couples' && (
+                            <button
+                                onClick={() => setCouplesTheme(!couplesTheme)}
+                                className={`couples-theme-btn ${couplesTheme ? 'active' : ''}`}
+                                title="Toggle Couples Mode"
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill={couplesTheme ? 'white' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                </svg>
+                            </button>
+                        )}
                         <button
                             onClick={toggleTheme}
                             style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '50%', color: 'var(--text-primary)', transition: 'all 0.2s' }}
