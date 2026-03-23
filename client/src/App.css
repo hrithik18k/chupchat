@@ -2522,3 +2522,90 @@ a:hover {
     rgba(99, 102, 241, 0.02) 360deg
   );
 }
+
+/* Empty State Animations */
+.empty-state-normal {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.5rem auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state-normal .radar-anim {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.empty-state-normal .radar-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 1px solid var(--accent-primary);
+  opacity: 0;
+  animation: radarPulse 3s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.empty-state-normal .radar-ring-2 {
+  animation-delay: 1.5s;
+}
+
+@keyframes radarPulse {
+  0% { transform: scale(0.8); opacity: 0; }
+  50% { opacity: 0.4; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.empty-state-couples {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.5rem auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffb3c6; /* pastel pink */
+}
+
+.empty-state-couples .heart-anim {
+  position: relative;
+  z-index: 2;
+  animation: heartBeating 1.5s ease-in-out infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state-couples .heart-pulse-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: rgba(255, 179, 198, 0.4);
+  opacity: 0;
+  animation: heartRipples 2s ease-out infinite;
+}
+
+.empty-state-couples .heart-pulse-ring-2 {
+  background-color: rgba(255, 255, 255, 0.4);
+  animation-delay: 1s;
+}
+
+@keyframes heartBeating {
+  0%, 100% { transform: scale(1); }
+  14% { transform: scale(1.15); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.15); }
+  70% { transform: scale(1); }
+}
+
+@keyframes heartRipples {
+  0% { transform: scale(0.5); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}

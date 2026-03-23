@@ -134,7 +134,7 @@ io.on('connection', (socket) => {
             users: [{ name: user.name, socketId: socket.id }]
         })
         socket.join(roomCode)
-        socket.emit('room-created', { success: true })
+        socket.emit('room-created', { success: true, roomType: room.roomType })
     })
 
     socket.on('join-room', async ({ roomCode, user, password }) => {
