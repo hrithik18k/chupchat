@@ -2609,3 +2609,60 @@ a:hover {
   0% { transform: scale(0.5); opacity: 0.8; }
   100% { transform: scale(2.2); opacity: 0; }
 }
+
+/* Couples Theme overrides applied to .app-layout */
+.app-layout.theme-couples {
+  --bg-base: #ffe4e6;
+  --bg-surface: #fff1f2;
+  --bg-surface-alt: #fecdd3;
+  --accent-primary: #f43f5e;
+  --accent-hover: #e11d48;
+  --text-primary: #881337;
+  --text-secondary: #be123c;
+  --border-light: rgba(244, 63, 94, 0.2);
+  
+  /* Additional touches for couples theme */
+  background: radial-gradient(circle at center, var(--bg-surface-alt) 0%, var(--bg-base) 100%);
+  transition: all 0.6s var(--spring);
+}
+
+[data-theme="dark"] .app-layout.theme-couples {
+  --bg-base: #2a0a18;
+  --bg-surface: #3f0f24;
+  --bg-surface-alt: #5c1635;
+  --accent-primary: #fb7185;
+  --accent-hover: #f43f5e;
+  --text-primary: #ffe4e6;
+  --text-secondary: #fda4af;
+  --border-light: rgba(251, 113, 133, 0.2);
+  
+  background: radial-gradient(circle at center, var(--bg-surface-alt) 0%, var(--bg-base) 100%);
+  transition: all 0.6s var(--spring);
+}
+
+.couples-theme-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #ec4899;
+  transition: all 0.3s var(--spring);
+}
+
+.couples-theme-btn:hover {
+  background: rgba(236, 72, 153, 0.15);
+  transform: scale(1.1);
+}
+
+.couples-theme-btn.active {
+  background: #ec4899;
+  color: white;
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.5);
+  animation: heartBeating 1.5s ease-in-out infinite;
+}
