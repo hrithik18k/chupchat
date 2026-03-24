@@ -2673,3 +2673,57 @@ a:hover {
   box-shadow: 0 0 12px rgba(236, 72, 153, 0.5);
   animation: heartBeating 1.5s ease-in-out infinite;
 }
+
+/* =============================================================
+   MOBILE PERFORMANCE & UI/UX POLISH
+   ============================================================= */
+@media (max-width: 768px) {
+  /* Hide complex background animations on mobile to ensure 60fps */
+  .rsbg-orbit, .rsbg-rain, .rsbg-hex, .rsbg-dataline {
+    display: none !important;
+  }
+  
+  /* Simplify remaining animations */
+  .rsbg-ring, .rsbg-sweep, .rsbg-sweep-2 {
+    animation-duration: 25s !important;
+    will-change: transform;
+  }
+
+  /* UI/UX Polish: Rejoin Button tweaks for mobile */
+  .recent-rooms-section {
+    padding: 0.8rem;
+  }
+  .recent-rooms-section .btn {
+    padding: 0.35rem 0.6rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* UI/UX Polish: Room Delete Requests consistency */
+  .btn-delete-room, .btn-request-delete {
+    font-size: 0.8rem !important;
+    padding: 0.6rem !important;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .sidebar-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+  }
+
+  /* Avoid cutting off text in headers */
+  .chat-header {
+    padding: 0 0.5rem;
+  }
+  .chat-title h2 {
+    font-size: 0.95rem;
+  }
+  .couples-theme-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 1rem;
+  }
+}
