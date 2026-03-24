@@ -53,7 +53,9 @@ const ParticleCanvas = ({ variant = 'full', theme = 'dark', style }) => {
     const ctx = canvas.getContext('2d')
     let width, height
 
-    const PARTICLE_COUNT = variant === 'ambient' ? 70 : 140
+    const SCREEN_WIDTH = typeof window !== 'undefined' ? window.innerWidth : 1024
+    const isMobile = SCREEN_WIDTH < 768
+    const PARTICLE_COUNT = (variant === 'ambient' ? 70 : 140) / (isMobile ? 2 : 1)
     const palette =
       theme === 'light'
         ? COLORS_LIGHT
