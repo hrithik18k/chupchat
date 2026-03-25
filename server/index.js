@@ -239,19 +239,31 @@ io.on('connection', (socket) => {
     })
 
     socket.on('mark-seen', async ({ roomCode, messageIds, userName }) => {
-        await Message.updateMany(
-            { _id: { $in: messageIds }, 'seenBy.name': { $ne: userName } },
-            { $push: { seenBy: { name: userName, seenAt: new Date() } } }
-        )
-        const updatedMessages = await Message.find(
-            { _id: { $in: messageIds } },
-            { _id: 1, seenBy: 1 }
-        )
-        io.to(roomCode).emit('seen-update', updatedMessages)
+        try {
+            const validIds = messageIds.filter(id => mongoose.Types.ObjectId.isValid(id));
+            if (validIds.length === 0) return;
+
+            await Message.updateMany(
+                { _id: { $in: validIds }, 'seenBy.name': { $ne: userName } },
+                { $push: { seenBy: { name: userName, seenAt: new Date() } } }
+            )
+            const updatedMessages = await Message.find(
+                { _id: { $in: validIds } },
+                { _id: 1, seenBy: 1 }
+            )
+            io.to(roomCode).emit('seen-update', updatedMessages)
+        } catch (error) {
+            console.error('Error in mark-seen:', error);
+        }
     })
 
     socket.on('delete-message', async ({ roomCode, messageId, userName }) => {
         try {
+            if (!mongoose.Types.ObjectId.isValid(messageId)) {
+                // If the message is a local message like a file transfer, broadcast its deletion.
+                io.to(roomCode).emit('message-deleted', { messageId });
+                return;
+            }
             console.log(`Attempting to delete message ${messageId} for user ${userName} in room ${roomCode}`);
             const deleted = await Message.findOneAndDelete({ _id: messageId, sender: userName });
             if (deleted) {
@@ -269,6 +281,10 @@ io.on('connection', (socket) => {
 
     socket.on('edit-message', async ({ roomCode, messageId, newEncryptedMessage, userName }) => {
         try {
+            if (!mongoose.Types.ObjectId.isValid(messageId)) {
+                socket.emit('edit-error', { error: 'Cannot edit this type of message' });
+                return;
+            }
             console.log(`Attempting to edit message ${messageId} for user ${userName} in room ${roomCode}`);
             const message = await Message.findOne({ _id: messageId, sender: userName });
             if (message) {
