@@ -115,9 +115,41 @@ app.get('/api/cipher/messages/:roomCode', async (req, res) => {
 })
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ... (before connection) ...
+const activeFiles = new Map(); // Warning: Render free tier (512MB RAM) might struggle with multiple 50MB concurrent file transfers
 const roomTypingUsers = {}
 
 io.on('connection', (socket) => {
+    // ── File Transfer Flow (In-Memory Relay Only) ───────────────────────────
+    socket.on('file-transfer-start', (data) => {
+        // data: { transferId, roomCode, sender, fileName, fileType, fileSize, totalChunks }
+        activeFiles.set(data.transferId, {
+            chunksReceived: 0,
+            totalChunks: data.totalChunks,
+            chunks: [] // Storing in RAM temporarily until transfer completes
+        });
+        socket.to(data.roomCode).emit('file-incoming', data);
+    });
+
+    socket.on('file-chunk', (data) => {
+        // data: { transferId, roomCode, chunkIndex, chunk }
+        const file = activeFiles.get(data.transferId);
+        if (!file) return;
+
+        file.chunks.push(data.chunk);
+        file.chunksReceived++;
+
+        socket.to(data.roomCode).emit('file-chunk-relay', {
+            transferId: data.transferId,
+            chunkIndex: data.chunkIndex,
+            chunk: data.chunk
+        });
+
+        if (file.chunksReceived >= file.totalChunks) {
+            activeFiles.delete(data.transferId);
+        }
+    });
+    // ────────────────────────────────────────────────────────────────────────
 
     socket.on('verify-recent-rooms', async ({ roomCodes }) => {
         try {
