@@ -49,12 +49,24 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
         const saved = localStorage.getItem(`onyx-recent-rooms-${user?.name || 'guest'}`);
         return saved ? JSON.parse(saved) : [];
     });
+    const [transferProgress, setTransferProgress] = useState({});
+    const incomingFilesRef = useRef({});
+    const blobUrlsRef = useRef([]);
+    const fileInputRef = useRef(null);
+
     const messagesEndRef = useRef(null)
     const messagesContainerRef = useRef(null)
     const typingTimeoutRef = useRef(null)
     const longPressTimeoutRef = useRef(null)
     const autoJoinAttempted = useRef(false)
     const sendBtnRef = useRef(null)
+    const lastAttemptedRoomRef = useRef('')
+
+    useEffect(() => {
+        return () => {
+            blobUrlsRef.current.forEach(u => URL.revokeObjectURL(u));
+        };
+    }, []);
 
     const saveRecentRoom = (code, pwd) => {
         if (!code) return;
@@ -103,12 +115,22 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
             setMessages(decrypted)
             setJoined(true)
             setError('')
-            saveRecentRoom(roomCode, password)
-            window.history.pushState({}, '', `/?room=${roomCode}&pwd=${password}`)
+            saveRecentRoom(lastAttemptedRoomRef.current || roomCode, password)
+            window.history.pushState({}, '', `/?room=${lastAttemptedRoomRef.current || roomCode}&pwd=${password}`)
             setTimeout(() => scrollToBottom(), 100)
         })
 
-        socket.on('room-error', msg => setError(msg))
+        socket.on('room-error', msg => {
+            setError(msg)
+            if (msg === 'Room does not exist' || msg === 'Invalid Room Code' || msg.includes('does not exist')) {
+                setRecentRooms(prev => {
+                    const attemptedCode = lastAttemptedRoomRef.current || roomCode;
+                    const u = prev.filter(r => r.roomCode !== attemptedCode);
+                    localStorage.setItem(`onyx-recent-rooms-${user?.name || 'guest'}`, JSON.stringify(u));
+                    return u;
+                })
+            }
+        })
 
         socket.on('user-joined', (updatedUsers) => {
             setUsers(updatedUsers);
@@ -138,6 +160,76 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
             ])
             setTypingUsers(prev => prev.filter(u => u !== sender))
         })
+
+        socket.on('file-incoming', (data) => {
+            incomingFilesRef.current[data.transferId] = {
+                chunks: new Array(data.totalChunks),
+                chunksReceived: 0,
+                totalChunks: data.totalChunks,
+                fileType: data.fileType,
+                fileName: data.fileName
+            };
+            setTransferProgress(prev => ({ ...prev, [data.transferId]: { progress: 0, completed: false } }));
+            
+            const newMsg = {
+                _id: data.transferId,
+                sender: data.sender,
+                message: '',
+                timestamp: new Date().toISOString(),
+                seenBy: [],
+                edited: false,
+                file: {
+                    fileName: data.fileName,
+                    fileType: data.fileType,
+                    fileSize: data.fileSize,
+                    direction: 'download'
+                }
+            };
+            setMessages(prev => [...prev, newMsg]);
+            setTimeout(() => scrollToBottom(), 100);
+        });
+
+        socket.on('file-chunk-relay', (data) => {
+            const transfer = incomingFilesRef.current[data.transferId];
+            if (!transfer) return;
+
+            transfer.chunks[data.chunkIndex] = data.chunk;
+            transfer.chunksReceived++;
+
+            const progress = Math.round((transfer.chunksReceived / transfer.totalChunks) * 100);
+            
+            if (transfer.chunksReceived % 5 === 0 || transfer.chunksReceived === transfer.totalChunks) {
+                setTransferProgress(prev => ({ 
+                    ...prev, 
+                    [data.transferId]: { progress, completed: false } 
+                }));
+            }
+
+            if (transfer.chunksReceived >= transfer.totalChunks) {
+                try {
+                    const byteArrays = transfer.chunks.map(b64 => {
+                        const binary = window.atob(b64);
+                        const len = binary.length;
+                        const bytes = new Uint8Array(len);
+                        for (let i = 0; i < len; i++) {
+                            bytes[i] = binary.charCodeAt(i);
+                        }
+                        return bytes;
+                    });
+                    const blob = new Blob(byteArrays, { type: transfer.fileType });
+                    const fileUrl = URL.createObjectURL(blob);
+                    blobUrlsRef.current.push(fileUrl);
+
+                    setTransferProgress(prev => ({ 
+                        ...prev, 
+                        [data.transferId]: { progress: 100, completed: true, fileUrl } 
+                    }));
+                    delete incomingFilesRef.current[data.transferId];
+                } catch (e) {
+                    console.error("Error assembling file", e);
+                }
+            }
+        });
 
         socket.on('message-deleted', ({ messageId }) => {
             setMessages(prev => prev.filter(m => m._id !== messageId));
@@ -253,8 +345,44 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
             socket.off('incoming-delete-request')
             socket.off('delete-request-rejected')
             socket.off('delete-request-result')
+            socket.off('file-incoming')
+            socket.off('file-chunk-relay')
         }
     }, [roomCode, password, user.name, users, user])
+
+    useEffect(() => {
+        socket.on('recent-rooms-verified', ({ existingCodes }) => {
+            setRecentRooms(prev => {
+                const filtered = prev.filter(r => existingCodes.includes(r.roomCode));
+                if (filtered.length !== prev.length) {
+                    localStorage.setItem(`onyx-recent-rooms-${user?.name || 'guest'}`, JSON.stringify(filtered));
+                    return filtered;
+                }
+                return prev;
+            });
+        });
+
+        return () => {
+            socket.off('recent-rooms-verified');
+        };
+    }, [user?.name]);
+
+    useEffect(() => {
+        if (!joined) {
+            try {
+                const saved = localStorage.getItem(`onyx-recent-rooms-${user?.name || 'guest'}`);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.length > 0) {
+                        const roomCodes = parsed.map(r => r.roomCode);
+                        socket.emit('verify-recent-rooms', { roomCodes });
+                    }
+                }
+            } catch (err) {
+                console.error('Error reading recent rooms:', err);
+            }
+        }
+    }, [joined, user?.name]);
 
     useEffect(() => {
         const handleClickOutside = () => {
@@ -326,6 +454,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
             setError('Password must be a 4-digit number.')
             return
         }
+        lastAttemptedRoomRef.current = roomCode;
         socket.emit('join-room', { roomCode, user, password })
     }
 
@@ -423,6 +552,65 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
             }, { once: true })
         }
     }
+
+    const handleFileSelect = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 50 * 1024 * 1024) {
+            alert("File must be less than 50MB");
+            e.target.value = '';
+            return;
+        }
+
+        const transferId = 'sf_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const CHUNK_SIZE = 256 * 1024;
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+        const fileUrl = URL.createObjectURL(file);
+        blobUrlsRef.current.push(fileUrl);
+
+        const newMsg = {
+            _id: transferId, sender: user.name, message: '', timestamp: new Date().toISOString(),
+            seenBy: [], edited: false,
+            file: { fileName: file.name, fileType: file.type, fileSize: file.size, direction: 'upload' }
+        };
+        setMessages(prev => [...prev, newMsg]);
+        setTransferProgress(prev => ({ ...prev, [transferId]: { progress: 0, completed: false, fileUrl } }));
+
+        socket.emit('file-transfer-start', {
+            transferId, roomCode, sender: user.name, fileName: file.name, fileType: file.type, fileSize: file.size, totalChunks
+        });
+
+        let currentChunk = 0;
+        const reader = new FileReader();
+
+        reader.onload = (evt) => {
+            const base64 = evt.target.result.split(',')[1];
+            socket.emit('file-chunk', { transferId, roomCode, chunkIndex: currentChunk, chunk: base64 });
+            
+            const progress = Math.round(((currentChunk + 1) / totalChunks) * 100);
+            if ((currentChunk + 1) % 5 === 0 || currentChunk + 1 === totalChunks) {
+                setTransferProgress(prev => ({ ...prev, [transferId]: { ...prev[transferId], progress, completed: currentChunk + 1 === totalChunks } }));
+            }
+            
+            currentChunk++;
+            if (currentChunk < totalChunks) {
+                readNextChunk();
+            } else {
+                scrollToBottom();
+                e.target.value = '';
+            }
+        };
+
+        const readNextChunk = () => {
+            const offset = currentChunk * CHUNK_SIZE;
+            const slice = file.slice(offset, offset + CHUNK_SIZE);
+            reader.readAsDataURL(slice);
+        };
+
+        readNextChunk();
+        socket.emit('stop-typing', { roomCode, user: user.name });
+    };
 
     const handleTyping = (e) => {
         setMessage(e.target.value)
@@ -675,6 +863,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                                             onClick={() => {
                                                 setRoomCode(room.roomCode);
                                                 setPassword(room.password);
+                                                lastAttemptedRoomRef.current = room.roomCode;
                                                 socket.emit('join-room', { roomCode: room.roomCode, user, password: room.password });
                                             }}
                                             className="btn btn-primary"
@@ -1070,6 +1259,38 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                                                         <button onClick={(e) => { e.stopPropagation(); handleSaveEdit(m); }} style={{ padding: '4px 8px', borderRadius: '4px', background: 'var(--accent-primary)', color: 'white', border: 'none', cursor: 'pointer' }}>Save</button>
                                                     </div>
                                                 </div>
+                                            ) : m.file ? (
+                                                <div className="file-message">
+                                                    {m.file.fileType.startsWith('image/') ? (
+                                                        <div className="file-image-preview">
+                                                            {transferProgress[m._id]?.fileUrl ? (
+                                                                <img src={transferProgress[m._id].fileUrl} alt={m.file.fileName} onClick={(e) => {e.stopPropagation(); window.open(transferProgress[m._id].fileUrl, '_blank')}} />
+                                                            ) : (
+                                                                <div className="file-image-placeholder">Loading image...</div>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="file-doc-preview">
+                                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2v4a2 2 0 002 2h4M4 7V4a2 2 0 012-2h8l6 6v12a2 2 0 01-2 2H6a2 2 0 01-2-2z"/></svg>
+                                                            <div className="file-info">
+                                                                <span className="file-name">{m.file.fileName}</span>
+                                                                <span className="file-size">{(m.file.fileSize / 1024 / 1024).toFixed(2)} MB</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    
+                                                    <div className="file-progress-container">
+                                                        {transferProgress[m._id] && !transferProgress[m._id].completed && (
+                                                            <div className="file-progress-bar" style={{ width: `${transferProgress[m._id].progress}%` }}></div>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    {transferProgress[m._id]?.completed && transferProgress[m._id]?.fileUrl && !m.file.fileType.startsWith('image/') && (
+                                                        <a href={transferProgress[m._id].fileUrl} download={m.file.fileName} className="file-download-btn" onClick={e=>e.stopPropagation()}>
+                                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Download</span>
+                                                        </a>
+                                                    )}
+                                                </div>
                                             ) : (
                                                 <div
                                                     className="message-content"
@@ -1260,7 +1481,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
 
                 <div className="chat-input-area">
                     <div className={`input-pill${message.toLowerCase().startsWith('@cipher') ? ' cipher-mode' : ''}`}>
-                        <button className="emoji-btn">
+                        <button className="emoji-btn" style={{ marginLeft: '4px', marginRight: '4px' }}>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
@@ -1268,6 +1489,21 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                                 <line x1="15" y1="9" x2="15.01" y2="9"></line>
                             </svg>
                         </button>
+                        <button 
+                            className="attach-btn" 
+                            onClick={() => fileInputRef.current?.click()}
+                            title="Attach File (Max 50MB)"
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"></path>
+                            </svg>
+                        </button>
+                        <input 
+                            type="file" 
+                            ref={fileInputRef} 
+                            style={{ display: 'none' }} 
+                            onChange={handleFileSelect} 
+                        />
                         <textarea
                             className="chat-input"
                             value={message}
