@@ -119,6 +119,16 @@ const roomTypingUsers = {}
 
 io.on('connection', (socket) => {
 
+    socket.on('verify-recent-rooms', async ({ roomCodes }) => {
+        try {
+            const existingRooms = await Room.find({ code: { $in: roomCodes } }, 'code').lean();
+            const existingCodes = existingRooms.map(r => r.code);
+            socket.emit('recent-rooms-verified', { existingCodes });
+        } catch (error) {
+            console.error('verify-recent-rooms error:', error);
+        }
+    });
+
     socket.on('create-room', async ({ roomCode, user, password, roomType }) => {
         let room = await Room.findOne({ code: roomCode })
         if (room) {
