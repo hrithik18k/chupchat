@@ -1,144 +1,81 @@
 <div align="center">
 
-<img src="client/public/onyx-logo.png" alt="Onyx Logo" width="90" height="90" style="border-radius: 20px;" />
+<img src="client/public/onyx-logo.png" alt="Onyx Logo" width="80" height="80" style="border-radius: 18px;" />
 
-# [ONYX](https://chupchat-1.onrender.com)
+# Onyx
 
-**Enterprise-Grade Encrypted Real-Time Chat**
+**Real-time encrypted chat — AES-256, end-to-end, always.**
 
-[![React](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
-[![Vite](https://img.shields.io/badge/Vite_7-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Express.js](https://img.shields.io/badge/Express_5-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
-[![Socket.io](https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socket.io&logoColor=white)](https://socket.io/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
-[![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
-
-
-
-[Report Bug](https://github.com/hrithik18k/chupchat/issues) · [Request Feature](https://github.com/hrithik18k/chupchat/issues)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-chupchat.onrender.com-5B5FFF?style=flat-square)](https://chupchat-1.onrender.com)
+[![React](https://img.shields.io/badge/React_19-20232A?style=flat-square&logo=react)](https://reactjs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-43853D?style=flat-square&logo=node.js)](https://nodejs.org/)
+[![Socket.io](https://img.shields.io/badge/Socket.io-black?style=flat-square&logo=socket.io)](https://socket.io/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=flat-square&logo=mongodb)](https://www.mongodb.com/)
 
 </div>
 
 ---
 
-## Overview
+## What is Onyx?
 
-**Onyx** is a production-ready, real-time encrypted chat application built on the MERN stack with Socket.io WebSockets. All messages are encrypted client-side using AES-256 before transmission — the server stores and relays only ciphertext, never plaintext.
-
-Beyond secure messaging, Onyx ships with an embedded AI assistant called **Cipher** (powered by Groq's LLaMA 3.3 70B), a QR-based invite system, read receipts with seen-by tooltips, multi-user typing indicators, three distinct room modes, and a reactive dual-theme UI.
+Onyx is a production-ready MERN + Socket.io chat app where **all messages are encrypted on the client before they ever leave your device**. The server stores and relays only ciphertext — it never sees your plaintext.
 
 ---
 
 ## Features
 
-### 🔐 End-to-End Encryption
-All messages are encrypted and decrypted strictly on the client using `crypto-js` (AES-256). The server never processes plaintext message content. Encrypted payloads are stored in MongoDB and re-transmitted as-is.
+### 🔐 Security
+- **AES-256 encryption** — all messages encrypted/decrypted in the browser via `crypto-js`
+- Server stores only ciphertext; plaintext never hits the backend
+- XSS protection on all rendered Markdown via `DOMPurify`
 
-### 🏠 Three Room Modes
+### 🏠 Three Room Types
 
-| Mode | Behaviour |
+| Type | Description |
 |---|---|
-| 🔓 **Normal** | Persistent room. Encrypted messages are stored in MongoDB and loaded for new joiners. |
-| 👻 **Ghost** | Zero-persistence. The room and all its messages are automatically purged the moment every participant disconnects. Cipher AI is disabled in this mode to maximise privacy. |
-| 💑 **Couples** | Hard-capped at 2 participants. Designed for private one-on-one conversations. |
+| 🔓 **Normal** | Persistent — messages saved to MongoDB |
+| 👻 **Ghost** | Zero-persistence — room + messages auto-purged when everyone leaves |
+| 💑 **Couples** | Hard cap of 2 participants for private one-on-one chats |
 
-### ✦ Cipher — In-Room AI Assistant
-An AI participant powered by Groq's LLaMA 3.3 70B, accessible via `@cipher` commands. All context assembly and decryption happens locally; only anonymised plaintext reaches the server proxy. Cipher's replies are visible only to the user who invoked it.
+### ✦ Cipher — AI Assistant
+Type `@cipher` to invoke an in-room AI powered by **Groq's LLaMA 3.3 70B**. Responses are only visible to you.
 
 | Command | Effect |
 |---|---|
-| `@cipher summarize` | Concise summary of recent messages |
-| `@cipher translate <lang>` | Translates recent messages into the target language |
-| `@cipher tone?` | Analyses the tone of the last message |
-| `@cipher draft` | Generates 3 draft replies (Professional / Friendly / Concise) |
-| `@cipher <question>` | Open-ended question answered in conversation context |
-| `@cipher help` | Displays the full command reference |
+| `@cipher summarize` | Summarize recent messages |
+| `@cipher translate <lang>` | Translate recent messages |
+| `@cipher tone?` | Analyze tone of the last message |
+| `@cipher draft` | Generate 3 reply drafts |
+| `@cipher <question>` | Ask anything about the conversation |
+| `@cipher help` | Show all commands |
 
-### 📡 Advanced Socket Telemetry
-- **Read Receipts** — Sent messages show a single tick (delivered) or double ticks in accent colour (seen). An info button reveals a "Seen by" tooltip with each viewer's name and timestamp, using the browser's native `IntersectionObserver` API.
-- **Multi-User Typing Indicators** — Real-time bouncing dot animation that gracefully aggregates multiple simultaneous typers: *"Priya and Rahul are typing…"*
+> Cipher is disabled in Ghost rooms for maximum privacy.
 
-### 📲 QR Auto-Join
-Each room generates a live QR code in the sidebar encoding `/?room=CODE&pwd=PASS`. Scanning it pre-fills and submits the join form — no manual entry required.
+### 💬 Chat Features
+- **Read receipts** — single tick (delivered) / double ticks (seen), with "Seen by" tooltip
+- **Typing indicators** — multi-user, e.g. *"Priya and Rahul are typing…"*
+- **Edit messages** within a 20-minute window
+- **Delete for everyone** — instantly removes from DB and all clients
+- **Markdown rendering** — bold, code blocks, tables, blockquotes
+- **File sharing** — up to 50MB, chunked transfer via WebSockets
+- **QR code invite** — scan to auto-join a room, no manual entry
 
-### ✏️ Message Management
-- **Edit** messages within a 20-minute window (broadcast to all room members).
-- **Delete for Everyone** — permanently removes a message from the database and all connected clients in real time.
-
-### 🗑️ Room Deletion Flow
-- **Room creator** can delete the room and all its messages instantly for everyone.
-- **Non-creators** can send a deletion request to the creator. The creator sees an in-room notification and can approve or reject. Approval triggers immediate room destruction.
-
-### 📝 Rich Markdown
-Messages render full Markdown (bold, italics, code blocks, tables, blockquotes) via `marked`, sanitised against XSS with `DOMPurify`.
-
-### 🔑 Dual Authentication
-- **Google Sign-In** via Firebase Authentication.
-- **Guest Mode** — generates an anonymous `Guest####` identity. No account required.
-
-### 🎨 Dual-Theme UI
-Dark (Electric Slate) and Light (Pure Canvas) modes with a single click. The preference persists via `localStorage`. The login screen features an interactive particle vortex canvas that responds to cursor movement.
-
----
-
-## Architecture
-
-```
-chupchat/
-├── client/                     # React + Vite frontend
-│   └── src/
-│       ├── components/
-│       │   ├── ChatRoom.jsx    # Core chat UI, socket event handling
-│       │   ├── login.jsx       # Authentication screen
-│       │   └── ParticleCanvas.jsx  # Animated login background
-│       ├── utils/
-│       │   └── cipher.js       # @cipher command parser + Groq proxy client
-│       ├── firebase.jsx        # Firebase Auth initialisation
-│       ├── App.jsx             # Root component, theme management, mouse-follower gradient
-│       └── App.css             # Full design system (CSS custom properties)
-│
-└── server/                     # Node.js + Express backend
-    ├── models/
-    │   ├── Message.js          # Encrypted message schema
-    │   └── room.js             # Room schema (code, type, users, creator)
-    └── index.js                # Express server, Socket.io handlers, Cipher proxy, REST endpoints
-```
+### 🎨 UI
+- Dark / Light theme toggle, persisted in `localStorage`
+- Interactive particle vortex on the login screen
+- Animated security background on the room selection screen
+- Couples theme — special pink color palette for Couples rooms
+- Fully responsive — mobile sidebar drawer included
 
 ---
 
 ## Tech Stack
 
-### Client
-| Package | Version | Purpose |
-|---|---|---|
-| React | 19.1 | UI framework |
-| Vite + SWC | 7.0 | Build tool & compiler |
-| socket.io-client | 4.8 | Real-time WebSocket client |
-| crypto-js | 4.2 | AES-256 client-side encryption |
-| firebase | 11.9 | Google Authentication |
-| marked | 17.0 | Markdown rendering |
-| dompurify | 3.3 | XSS sanitisation |
-| react-qr-code | 2.0 | QR code generation |
+**Client** — React 19, Vite 7, Socket.io-client, crypto-js, Firebase Auth, marked, DOMPurify, react-qr-code
 
-### Server
-| Package | Version | Purpose |
-|---|---|---|
-| Node.js + Express | 5.1 | HTTP server & REST API |
-| socket.io | 4.8 | WebSocket server |
-| mongoose | 8.16 | MongoDB ODM |
-| cors | 2.8 | CORS middleware |
-| dotenv | 16.5 | Environment variable loading |
-| helmet | 8.1 | HTTP security headers |
-| express-rate-limit | 8.0 | Request rate limiting |
-| nodemon | 3.1 | Development hot-reload |
+**Server** — Node.js, Express 5, Socket.io, Mongoose, Helmet, express-rate-limit
 
-### External Services
-| Service | Usage |
-|---|---|
-| MongoDB Atlas | Encrypted message and room persistence |
-| Firebase Auth | Google sign-in via OAuth popup |
-| Groq API (LLaMA 3.3 70B) | Cipher AI responses |
+**Services** — MongoDB Atlas (storage), Firebase Auth (Google sign-in), Groq API (Cipher AI)
 
 ---
 
@@ -146,19 +83,19 @@ chupchat/
 
 ### Prerequisites
 - Node.js ≥ 18
-- A MongoDB Atlas cluster (free tier works)
-- A Firebase project with Google Auth enabled
+- MongoDB Atlas cluster (free tier works)
+- Firebase project with Google Auth enabled
+- Groq API key (free at [console.groq.com](https://console.groq.com))
 
-### 1. Clone the Repository
+### 1. Clone
 ```bash
 git clone https://github.com/hrithik18k/chupchat.git
 cd chupchat
 ```
 
-### 2. Configure & Run the Server
+### 2. Server
 ```bash
-cd server
-npm install
+cd server && npm install
 ```
 
 Create `server/.env`:
@@ -171,99 +108,80 @@ GROQ_API_KEY=your_groq_api_key
 ```bash
 npm run dev
 ```
-The backend starts on `http://localhost:5000`.
 
-### 3. Configure & Run the Client
+### 3. Client
 ```bash
-cd client
-npm install
+cd client && npm install
 ```
 
 Create `client/.env`:
 ```env
-# AES encryption key — generate a strong random string
-VITE_SECRET_KEY=generate_a_long_random_string_here
+VITE_SECRET_KEY=any_long_random_string
 
-# Firebase project config
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_STORAGE_BUCKET=...
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+VITE_FIREBASE_APP_ID=...
 ```
 
 ```bash
 npm run dev
 ```
-The app is available at `http://localhost:5173`.
 
-> **Note:** Both the server and client must be running simultaneously for the app to function.
-
----
-
-## Security Model
-
-| Threat | Mitigation |
-|---|---|
-| Server reads messages | AES-256 encryption on client; server only stores ciphertext |
-| XSS via Markdown | All rendered HTML is sanitised by `DOMPurify` before injection |
-| Groq API key exposure | Key lives in server `.env`; client calls a local proxy endpoint |
-| Cipher context leakage | Messages are decrypted locally; anonymised text (`[participant]`) is sent to Groq — never raw usernames |
-| Rate abuse of Cipher | Server-side rate limiter: 10 Cipher requests per IP per minute |
-| Brute-force joins | Room codes (4–8 alphanumeric) + 4-digit numeric passwords |
-| Ghost room data retention | All messages and room records are deleted from MongoDB upon full disconnect |
+App runs at `http://localhost:5173` — both server and client must be running.
 
 ---
 
-## Design System
+## Project Structure
 
-Onyx uses a single CSS custom-property token system defined in `App.css`. Switching themes updates `[data-theme]` on `<html>` and all tokens cascade automatically.
-
-| Token | Dark | Light |
-|---|---|---|
-| `--bg-base` | `#050B18` | `#f1f5f9` |
-| `--bg-surface` | `#0a1120` | `#ffffff` |
-| `--bg-surface-alt` | `#121c33` | `#e2e8f0` |
-| `--accent-primary` | `#5B5FFF` | `#4f46e5` |
-| `--accent-hover` | `#4a4edf` | `#4338ca` |
-| `--text-primary` | `#ffffff` | `#0f172a` |
-| `--text-secondary` | `#8b98a9` | `#475569` |
-
-**Typefaces:** [Syne](https://fonts.google.com/specimen/Syne) (headings) · [DM Sans](https://fonts.google.com/specimen/DM+Sans) (body)
+```
+chupchat/
+├── client/src/
+│   ├── components/
+│   │   ├── ChatRoom.jsx      # Core chat UI + all socket logic
+│   │   ├── login.jsx         # Auth screen
+│   │   └── ParticleCanvas.jsx
+│   ├── utils/cipher.js       # @cipher command parser + Groq proxy client
+│   └── firebase.jsx
+│
+└── server/
+    ├── models/
+    │   ├── Message.js        # Encrypted message schema
+    │   └── room.js           # Room schema
+    └── index.js              # Express + Socket.io + Cipher proxy
+```
 
 ---
 
 ## API Reference
 
-### REST Endpoints
-
 | Method | Route | Description |
 |---|---|---|
-| `POST` | `/api/cipher` | Proxies a request to Groq. Accepts `{ systemPrompt, messages[] }`. Returns `{ reply }`. Rate-limited. |
-| `GET` | `/api/cipher/messages/:roomCode` | Returns the last 20 encrypted messages for a room (for Cipher context assembly). Returns `sender`, `encryptedMessage`, `timestamp` only. |
+| `POST` | `/api/cipher` | Proxy to Groq. Body: `{ systemPrompt, messages[] }` |
+| `GET` | `/api/cipher/messages/:roomCode` | Last 20 encrypted messages (for Cipher context) |
 
+---
+
+## Authentication
+
+- **Google Sign-In** via Firebase OAuth popup
+- **Guest Mode** — generates an anonymous `Guest####` identity, no account needed
 
 ---
 
 ## Contributing
 
-Contributions are welcome. Please follow the standard fork-and-PR workflow:
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature-name`
-3. Commit with a descriptive message: `git commit -m "feat: add voice message support"`
-4. Push the branch: `git push origin feature/your-feature-name`
-5. Open a Pull Request against `main`
+1. Fork → create branch → commit → PR against `main`
+2. Commit format: `feat: add voice messages`, `fix: ghost room cleanup`
 
 ---
 
 ## License
 
-This project is open source. See [LICENSE](LICENSE) for details.
+Open source. See [LICENSE](LICENSE) for details.
 
 ---
 
-<div align="center">
-  <p>Built by <a href="https://github.com/hrithik18k">Hrithik</a></p>
-</div>
+<div align="center">Built by <a href="https://github.com/hrithik18k">Hrithik</a></div>
