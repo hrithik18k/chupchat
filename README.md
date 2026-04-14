@@ -28,6 +28,7 @@ Onyx is a production-ready MERN + Socket.io chat app where **all messages are en
 - **AES-256 encryption** — all messages encrypted/decrypted in the browser via `crypto-js`
 - Server stores only ciphertext; plaintext never hits the backend
 - XSS protection on all rendered Markdown via `DOMPurify`
+- Server-side API key proxying — Groq API key is never exposed to the client
 
 ### 🏠 Three Room Types
 
@@ -38,34 +39,42 @@ Onyx is a production-ready MERN + Socket.io chat app where **all messages are en
 | 💑 **Couples** | Hard cap of 2 participants for private one-on-one chats |
 
 ### ✦ Cipher — AI Assistant
-Type `@cipher` to invoke an in-room AI powered by **Groq's LLaMA 3.3 70B**. Responses are only visible to you.
+Type `@cipher` in any normal or couples room to invoke an in-room AI powered by **Groq's LLaMA 3.3 70B**. Chat context is decrypted locally before being sent — the server only proxies already-assembled plaintext and never persists it. Responses are only visible to you.
 
 | Command | Effect |
 |---|---|
 | `@cipher summarize` | Summarize recent messages |
-| `@cipher translate <lang>` | Translate recent messages |
-| `@cipher tone?` | Analyze tone of the last message |
-| `@cipher draft` | Generate 3 reply drafts |
+| `@cipher translate <lang>` | Translate recent messages into the specified language |
+| `@cipher tone?` | Analyze the tone of the last message |
+| `@cipher draft` | Generate 3 reply drafts (Professional / Friendly / Concise) |
 | `@cipher <question>` | Ask anything about the conversation |
 | `@cipher help` | Show all commands |
 
 > Cipher is disabled in Ghost rooms for maximum privacy.
 
 ### 💬 Chat Features
-- **Read receipts** — single tick (delivered) / double ticks (seen), with "Seen by" tooltip
-- **Typing indicators** — multi-user, e.g. *"Priya and Rahul are typing…"*
-- **Edit messages** within a 20-minute window
-- **Delete for everyone** — instantly removes from DB and all clients
-- **Markdown rendering** — bold, code blocks, tables, blockquotes
-- **File sharing** — up to 50MB, chunked transfer via WebSockets
-- **QR code invite** — scan to auto-join a room, no manual entry
+- **Read receipts** — single tick (delivered) / double ticks (seen), with a "Seen by" tooltip showing each viewer and timestamp
+- **Typing indicators** — multi-user aware, e.g. *"Priya and Rahul are typing…"*
+- **Edit messages** within a 20-minute window (encrypted in-flight)
+- **Delete for everyone** — instantly removes from DB and all connected clients
+- **Markdown rendering** — bold, inline code, code blocks, tables, blockquotes, lists
+- **File sharing** — up to 50 MB, chunked binary transfer via WebSockets (no third-party storage)
+- **QR code invite** — scan to auto-join a room with the password pre-filled
+- **Recently joined rooms** — quick-rejoin list stored in `localStorage`, auto-purged when rooms no longer exist
 
-### 🎨 UI
+### 🗑️ Room Management
+- **Creator** can permanently delete a room and all its messages for everyone
+- **Non-creator** can send a deletion request; the creator can approve or reject it in real time
+- Ghost rooms self-destruct automatically when the last participant leaves
+
+### 🎨 UI & UX
 - Dark / Light theme toggle, persisted in `localStorage`
-- Interactive particle vortex on the login screen
-- Animated security background on the room selection screen
-- Couples theme — special pink color palette for Couples rooms
-- Fully responsive — mobile sidebar drawer included
+- **Couples theme** — optional pink color palette for Couples rooms, toggled via a heart button in the header
+- Interactive particle vortex on the login screen (scales down on mobile/low-memory devices)
+- Animated security radar background on the room selection screen (orbit dots, matrix rain, scan lines — all GPU-accelerated, disabled on mobile for 60 fps)
+- Spring-physics animations throughout: message bubbles, send button pop, toast bounce-in, system message expand
+- Fully responsive — hamburger + slide-in sidebar drawer on mobile
+- Custom scrollbar styling, `prefers-reduced-motion` respected everywhere
 
 ---
 
@@ -73,9 +82,35 @@ Type `@cipher` to invoke an in-room AI powered by **Groq's LLaMA 3.3 70B**. Resp
 
 **Client** — React 19, Vite 7, Socket.io-client, crypto-js, Firebase Auth, marked, DOMPurify, react-qr-code
 
-**Server** — Node.js, Express 5, Socket.io, Mongoose, Helmet, express-rate-limit
+**Server** — Node.js, Express 5, Socket.io 4, Mongoose, Helmet, express-rate-limit
 
-**Services** — MongoDB Atlas (storage), Firebase Auth (Google sign-in), Groq API (Cipher AI)
+**Services** — MongoDB Atlas (storage), Firebase Auth (Google sign-in), Groq API (Cipher AI via LLaMA 3.3 70B)
+
+---
+
+## Architecture Notes
+
+```
+Browser                        Server                        External
+──────────────────────         ──────────────────────────    ──────────────
+ plaintext message             receives ciphertext only
+      │                               │
+      ▼                               │
+ AES-256 encrypt (crypto-js)          │
+      │                               │
+      └──── Socket.io ───────────────►│──── MongoDB Atlas (ciphertext)
+                                      │
+ @cipher command                      │
+      │                               │
+      ▼                               │
+ decrypt context locally              │
+      └──── HTTP POST ───────────────►│──── Groq API (transient plaintext)
+                                      │     (never stored)
+```
+
+- The **VITE_SECRET_KEY** used for AES encryption lives only in the browser environment. All participants in a room share the same key (set via env var).
+- Cipher context is assembled and decrypted **client-side**; only the resulting plaintext prompt travels to the server proxy — it is never written to any database.
+- File transfers are chunked (256 KB chunks) and relayed through the Socket.io server in RAM. No file data is ever written to disk or a database.
 
 ---
 
@@ -132,25 +167,34 @@ npm run dev
 
 App runs at `http://localhost:5173` — both server and client must be running.
 
+> **Note:** All room participants must use the same `VITE_SECRET_KEY` to decrypt each other's messages. In production, this key is baked into the deployed client bundle.
+
 ---
 
 ## Project Structure
 
 ```
 chupchat/
-├── client/src/
-│   ├── components/
-│   │   ├── ChatRoom.jsx      # Core chat UI + all socket logic
-│   │   ├── login.jsx         # Auth screen
-│   │   └── ParticleCanvas.jsx
-│   ├── utils/cipher.js       # @cipher command parser + Groq proxy client
-│   └── firebase.jsx
+├── client/
+│   ├── public/
+│   │   └── onyx-logo.png
+│   └── src/
+│       ├── components/
+│       │   ├── ChatRoom.jsx        # Core chat UI, all socket event handlers, file transfer
+│       │   ├── login.jsx           # Google + Guest auth screen
+│       │   └── ParticleCanvas.jsx  # Reusable canvas particle system (full / ambient variants)
+│       ├── utils/
+│       │   └── cipher.js           # @cipher command parser, prompt builder, Groq proxy client
+│       ├── firebase.jsx            # Firebase init + Google sign-in helper
+│       ├── App.jsx                 # Root: theme state, mouse-follower gradient, routing
+│       ├── App.css                 # Full design system, animations, responsive rules
+│       └── index.css               # Base resets
 │
 └── server/
     ├── models/
-    │   ├── Message.js        # Encrypted message schema
-    │   └── room.js           # Room schema
-    └── index.js              # Express + Socket.io + Cipher proxy
+    │   ├── Message.js              # Encrypted message schema (roomCode, sender, encryptedMessage, seenBy)
+    │   └── room.js                 # Room schema (code, password, roomType, users[], createdByName)
+    └── index.js                    # Express app, Socket.io handlers, Cipher proxy, file relay
 ```
 
 ---
@@ -159,15 +203,44 @@ chupchat/
 
 | Method | Route | Description |
 |---|---|---|
-| `POST` | `/api/cipher` | Proxy to Groq. Body: `{ systemPrompt, messages[] }` |
-| `GET` | `/api/cipher/messages/:roomCode` | Last 20 encrypted messages (for Cipher context) |
+| `GET` | `/` | Health check |
+| `POST` | `/api/cipher` | Proxy to Groq. Body: `{ systemPrompt, messages[] }`. Rate-limited: 10 req/min per IP. |
+| `GET` | `/api/cipher/messages/:roomCode` | Last 20 encrypted messages for client-side Cipher context assembly |
+
+### Socket.io Events (Client → Server)
+
+| Event | Payload | Description |
+|---|---|---|
+| `create-room` | `{ roomCode, user, password, roomType }` | Create a new room |
+| `join-room` | `{ roomCode, user, password }` | Join an existing room |
+| `leave-room` | `{ roomCode, user }` | Leave gracefully |
+| `send-message` | `{ roomCode, encryptedMessage, sender, timestamp }` | Broadcast a message |
+| `edit-message` | `{ roomCode, messageId, newEncryptedMessage, userName }` | Edit within 20-min window |
+| `delete-message` | `{ roomCode, messageId, userName }` | Delete for everyone |
+| `typing` / `stop-typing` | `{ roomCode, user }` | Typing indicator control |
+| `mark-seen` | `{ roomCode, messageIds[], userName }` | Update read receipts |
+| `file-transfer-start` | `{ transferId, roomCode, sender, fileName, fileType, fileSize, totalChunks }` | Begin chunked file transfer |
+| `file-chunk` | `{ transferId, roomCode, chunkIndex, chunk }` | Send a 256 KB base64 chunk |
+| `delete-room` | `{ roomCode, userName }` | Creator deletes the room |
+| `request-delete-room` | `{ roomCode, requesterName }` | Non-creator requests deletion |
+| `approve-delete-room` | `{ roomCode, userName }` | Creator approves deletion request |
+| `reject-delete-room` | `{ roomCode, requesterName }` | Creator rejects deletion request |
+| `verify-recent-rooms` | `{ roomCodes[] }` | Check which recent rooms still exist |
 
 ---
 
 ## Authentication
 
 - **Google Sign-In** via Firebase OAuth popup
-- **Guest Mode** — generates an anonymous `Guest####` identity, no account needed
+- **Guest Mode** — generates an anonymous `Guest####` identity stored in `localStorage`; no account needed
+
+---
+
+## Known Limitations
+
+- **File transfer RAM** — files are buffered in server RAM during relay. The free-tier Render instance (512 MB) may struggle with multiple concurrent large file transfers.
+- **Shared encryption key** — AES-256 is symmetric; all room participants share the key embedded in the client build. This protects data at rest and in transit from the server, but participants themselves can decrypt all messages by design.
+- **No message pagination** — all past messages for a room are fetched on join. Large rooms with many messages may have slower load times.
 
 ---
 
