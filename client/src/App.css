@@ -101,6 +101,8 @@ h6 {
   gap: 0.5rem;
   border: 1px solid transparent;
   width: 100%;
+  position: relative;
+  overflow: hidden;
 }
 
 .btn:active {
@@ -115,11 +117,13 @@ h6 {
 .btn-primary {
   background-color: var(--accent-primary);
   color: #fff;
+  transition: background-color 0.22s ease, box-shadow 0.22s ease, transform 0.15s ease;
 }
 
 .btn-primary:hover:not(:disabled) {
   background-color: var(--accent-hover);
-  box-shadow: 0 4px 12px rgba(91, 95, 255, 0.25);
+  box-shadow: 0 4px 18px rgba(91, 95, 255, 0.35);
+  transform: translateY(-1px);
 }
 
 .btn-outline {
@@ -1056,10 +1060,7 @@ a:hover {
 }
 
 /* Nav / inline button micro hover */
-.btn {
-  position: relative;
-  overflow: hidden;
-}
+/* .btn merged into line 90 */
 
 .btn::after {
   content: '';
@@ -1077,17 +1078,9 @@ a:hover {
 }
 
 /* Download / primary CTA - cursor fills on hover */
-.btn-primary {
-  background-color: var(--accent-primary);
-  color: #fff;
-  transition: background-color 0.22s ease, box-shadow 0.22s ease, transform 0.15s ease;
-}
+/* .btn-primary merged into line 115 */
 
-.btn-primary:hover:not(:disabled) {
-  background-color: var(--accent-hover);
-  box-shadow: 0 4px 18px rgba(91, 95, 255, 0.35);
-  transform: translateY(-1px);
-}
+/* .btn-primary:hover merged into line 120 */
 
 /* Inline link hover (Docs, Twitter-style links in messages) */
 .message-content a {
@@ -2333,21 +2326,12 @@ a:hover {
   position: absolute;
   pointer-events: none;
   will-change: transform, opacity;
-  /* Hexagon via clip-path */
-  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  background: transparent;
-  outline: 1px solid rgba(91, 95, 255, 0.25);
-}
-
-/* Use border trick instead of clip-path outline */
-.rsbg-hex {
-  clip-path: none;
-  border-radius: 0;
   width: 40px;
   height: 46px;
   border: 1px solid rgba(91, 95, 255, 0.2);
   border-radius: 4px;
   transform: rotate(30deg);
+}
   background: rgba(91, 95, 255, 0.03);
 }
 

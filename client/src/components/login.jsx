@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import PropTypes from 'prop-types'
 import { signInWithGoogle } from '../firebase'
 
 const Login = ({ setUser, theme, toggleTheme }) => {
@@ -98,4 +99,10 @@ const Login = ({ setUser, theme, toggleTheme }) => {
     )
 }
 
-export default Login
+Login.propTypes = {
+    setUser: PropTypes.func.isRequired,
+    theme: PropTypes.string.isRequired,
+    toggleTheme: PropTypes.func.isRequired
+}
+
+export default Login
