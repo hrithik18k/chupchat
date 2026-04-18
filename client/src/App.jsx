@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import PropTypes from 'prop-types'
 import Login from './components/login.jsx'
 import ChatRoom from './components/ChatRoom.jsx'
 import ParticleCanvas from './components/ParticleCanvas.jsx'
@@ -166,3 +167,7 @@ const App = () => {
 }
 
 export default App
+
+App.propTypes = {
+  // Add props here if App ever receives any, current usage has none.
+}
