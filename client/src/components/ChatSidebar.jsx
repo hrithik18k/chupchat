@@ -18,7 +18,7 @@ const ChatSidebar = ({
 }) => {
     return (
         <>
-            <div className={`sidebar-overlay ${mobileSidebarOpen ? 'mobile-open' : ''}`} onClick={() => setMobileSidebarOpen(false)} />
+            <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setMobileSidebarOpen(false) }} className={`sidebar-overlay ${mobileSidebarOpen ? 'mobile-open' : ''}`} onClick={() => setMobileSidebarOpen(false)} />
             <div className={`sidebar ${mobileSidebarOpen ? 'mobile-open' : ''}`}>
                 <div className="sidebar-header">
                     <h2>Room Info</h2>
@@ -49,7 +49,7 @@ const ChatSidebar = ({
                         <h3>Participants ({users.length})</h3>
                         <div className="user-list">
                             {users.map((u, i) => (
-                                <div key={i} className="user-item">
+                                <div key={u.name || i} className="user-item">
                                     <div className="user-avatar">
                                         {u.photoURL ? <img src={u.photoURL} alt={u.name} /> : u.name?.charAt(0)}
                                     </div>
@@ -91,8 +91,8 @@ ChatSidebar.propTypes = {
     roomCode: PropTypes.string.isRequired,
     password: PropTypes.string.isRequired,
     currentRoomType: PropTypes.string.isRequired,
-    users: PropTypes.array.isRequired,
-    user: PropTypes.object.isRequired,
+    users: PropTypes.arrayOf(PropTypes.shape({ name: PropTypes.string.isRequired, photoURL: PropTypes.string, socketId: PropTypes.string, _id: PropTypes.string })).isRequired,
+    user: PropTypes.shape({ name: PropTypes.string.isRequired, photoURL: PropTypes.string }).isRequired,
     handleDeleteRoom: PropTypes.func.isRequired,
     handleRequestDeleteRoom: PropTypes.func.isRequired,
     deleteRequestPending: PropTypes.bool.isRequired,

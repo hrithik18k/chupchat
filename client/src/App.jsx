@@ -169,5 +169,6 @@ const App = () => {
 export default App
 
 App.propTypes = {
-  // Add props here if App ever receives any, current usage has none.
+  toggleTheme: PropTypes.func,
+  theme: PropTypes.string
 }

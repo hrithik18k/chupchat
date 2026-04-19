@@ -34,6 +34,13 @@ const MessageItem = ({
 
     return (
         <div
+            role="article"
+            tabIndex={0}
+            onKeyDown={(e) => {
+                if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
+                    handleContextMenu(e, m);
+                }
+            }}
             className={`message-wrapper ${isSent ? 'sent' : 'received'}`}
             data-message-id={m._id}
             onContextMenu={(e) => handleContextMenu(e, m)}
@@ -83,7 +90,7 @@ const MessageItem = ({
 
 MessageItem.propTypes = {
     m: PropTypes.object.isRequired,
-    user: PropTypes.object.isRequired,
+    user: PropTypes.shape({ name: PropTypes.string.isRequired, photoURL: PropTypes.string }).isRequired,
     formatTimestamp: PropTypes.func.isRequired,
     handleContextMenu: PropTypes.func.isRequired,
     openReceiptId: PropTypes.string,
