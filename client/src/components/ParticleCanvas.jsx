@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import PropTypes from 'prop-types'
 
 // brand palette
 const COLORS_FULL    = ['#5B5FFF', '#ef4444', '#facc15', '#60a5fa', '#a78bfa']
@@ -56,12 +57,12 @@ const ParticleCanvas = ({ variant = 'full', theme = 'dark', style }) => {
     const SCREEN_WIDTH = typeof window !== 'undefined' ? window.innerWidth : 1024
     const isMobile = SCREEN_WIDTH < 768
     const PARTICLE_COUNT = (variant === 'ambient' ? 70 : 140) / (isMobile ? 2 : 1)
-    const palette =
-      theme === 'light'
-        ? COLORS_LIGHT
-        : variant === 'ambient'
-        ? COLORS_AMBIENT
-        : COLORS_FULL
+    let palette;
+    if (theme === 'light') {
+      palette = COLORS_LIGHT;
+    } else {
+      palette = variant === 'ambient' ? COLORS_AMBIENT : COLORS_FULL;
+    }
 
     const resize = () => {
       width  = canvas.width  = canvas.offsetWidth
@@ -179,3 +180,9 @@ const ParticleCanvas = ({ variant = 'full', theme = 'dark', style }) => {
 }
 
 export default ParticleCanvas
+
+ParticleCanvas.propTypes = {
+  variant: PropTypes.string,
+  theme: PropTypes.string,
+  style: PropTypes.object
+}
