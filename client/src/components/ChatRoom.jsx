@@ -21,8 +21,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
     const hasUrlPassword = new URLSearchParams(window.location.search).has('pwd');
     const [joined, setJoined] = useState(false);
     const [mode, setMode] = useState(() => {
-        const params = new URLSearchParams(window.location.search);
-        return params.get('room') ? 'join' : 'join';
+        return 'join';
     });
     const [error, setError] = useState('')
     const [users, setUsers] = useState([])
@@ -61,6 +60,13 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
     const autoJoinAttempted = useRef(false)
     const sendBtnRef = useRef(null)
     const lastAttemptedRoomRef = useRef('')
+
+    const stopPropagation = (e) => e.stopPropagation()
+    const closeMobileSidebar = () => setMobileSidebarOpen(false)
+    const openImagePreview = (e, fileUrl) => {
+        e.stopPropagation()
+        window.open(fileUrl, '_blank')
+    }
 
     useEffect(() => {
         return () => {
@@ -323,7 +329,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                 setUsers([]);
                 setError('');
                 setMode('join');
-                setTyping('');
+                setMessage('');
             }, 2000);
         };
         socket.on('room-closed', handleRoomClosed)
@@ -385,12 +391,12 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
     }, [joined, user?.name]);
 
     useEffect(() => {
-        const handleClickOutside = () => {
+        const handlePointerOutside = () => {
             setOpenReceiptId(null);
             setOpenContextMenuId(null);
         };
-        document.addEventListener('click', handleClickOutside);
-        return () => document.removeEventListener('click', handleClickOutside);
+        document.addEventListener('pointerdown', handlePointerOutside);
+        return () => document.removeEventListener('pointerdown', handlePointerOutside);
     }, []);
 
     useEffect(() => {
@@ -656,7 +662,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
         setUsers([])
         setError('')
         setMode('join')
-        setTyping('')
+        setMessage('')
     }
 
     const handleReturnHome = () => {
@@ -971,11 +977,16 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
 
     return (
         <div className={`app-layout ${currentRoomType === 'couples' && couplesTheme ? 'theme-couples' : ''}`}>
-            <div className={`sidebar-overlay ${mobileSidebarOpen ? 'mobile-open' : ''}`} onClick={() => setMobileSidebarOpen(false)}></div>
+            <button
+                type="button"
+                className={`sidebar-overlay ${mobileSidebarOpen ? 'mobile-open' : ''}`}
+                onClick={closeMobileSidebar}
+                aria-label="Close sidebar"
+            />
             <div className={`sidebar ${mobileSidebarOpen ? 'mobile-open' : ''}`}>
                 <div className="sidebar-header">
                     <h2>Terminal ID: {roomCode}</h2>
-                    <button className="close-sidebar-btn" onClick={() => setMobileSidebarOpen(false)}>
+                    <button className="close-sidebar-btn" onClick={closeMobileSidebar}>
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1264,7 +1275,14 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                                                     {m.file.fileType.startsWith('image/') ? (
                                                         <div className="file-image-preview">
                                                             {transferProgress[m._id]?.fileUrl ? (
-                                                                <img src={transferProgress[m._id].fileUrl} alt={m.file.fileName} onClick={(e) => {e.stopPropagation(); window.open(transferProgress[m._id].fileUrl, '_blank')}} />
+                                                                <button
+                                                                    type="button"
+                                                                    className="file-image-preview-btn"
+                                                                    onClick={(e) => openImagePreview(e, transferProgress[m._id].fileUrl)}
+                                                                    title="Open image preview"
+                                                                >
+                                                                    <img src={transferProgress[m._id].fileUrl} alt={m.file.fileName} />
+                                                                </button>
                                                             ) : (
                                                                 <div className="file-image-placeholder">Loading image...</div>
                                                             )}
@@ -1361,7 +1379,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                                                     display: 'flex', flexDirection: 'column',
                                                     overflow: 'hidden'
                                                 }}
-                                                onClick={(e) => e.stopPropagation()}
+                                                onPointerDown={stopPropagation}
                                             >
                                                 {Date.now() - new Date(m.timestamp).getTime() <= 20 * 60 * 1000 && (
                                                     <button
@@ -1394,7 +1412,7 @@ const ChatRoom = ({ user, clearUser, theme, toggleTheme }) => {
                                                     animation: 'fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                                                     transformOrigin: 'bottom right'
                                                 }}
-                                                onClick={(e) => e.stopPropagation()}
+                                                onPointerDown={stopPropagation}
                                             >
                                                 <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-light)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
